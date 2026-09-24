@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Farm</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        background: #0d0d0d;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        color: #fff;
+        user-select: none;
+    }
+    #gameCanvas {
+        border: 4px solid #2a2a2a;
+        box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 80px rgba(100,180,80,0.15);
+        image-rendering: pixelated;
+        display: block;
+    }
+    #hud {
+        position: absolute;
+        top: 12px; left: 12px;
+        background: rgba(0,0,0,0.65);
+        padding: 10px 14px;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        font-size: 12px;
+        line-height: 1.6;
+        pointer-events: none;
+        display: none;
+    }
+    #hud b { color: #ffd54a; }
+    .screen {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #1a2a1a 0%, #0d0d0d 100%);
+        z-index: 100;
+        gap: 12px;
+    }
+    .screen.hidden { display: none; }
+    .screen h1 {
+        font-size: 64px;
+        letter-spacing: 4px;
+        color: #8ec96f;
+        text-shadow: 0 4px 0 #1a2a1a, 0 8px 20px rgba(142,201,111,0.4);
+        margin-bottom: 24px;
+        font-family: 'Courier New', monospace;
+    }
+    .screen h2 {
+        font-size: 36px;
+        color: #8ec96f;
+        margin-bottom: 20px;
+        letter-spacing: 2px;
+    }
+    .screen button {
+        background: #2a4a2a;
+        color: #d8ffd0;
+        border: 2px solid #4a7a4a;
+        padding: 14px 48px;
+        font-size: 18px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-family: inherit;
+        letter-spacing: 1px;
+        transition: all 0.15s ease;
+        min-width: 260px;
+    }
+    .screen button:hover {
+        background: #3a6a3a;
+        border-color: #8ec96f;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(142,201,111,0.3);
+    }
+    .screen button:active { transform: translateY(0); }
+    .screen button.danger {
+        background: #4a2020;
+        border-color: #7a3a3a;
+        color: #ffb0b0;
+    }
+    .screen button.danger:hover {
+        background: #6a3030;
+        border-color: #ff8080;
+    }
+    .screen button.small { min-width: 140px; padding: 10px 24px; font-size: 14px; }
+    .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 400px;
+        padding: 10px 0;
+        font-size: 16px;
+    }
+    .slider-row label { width: 100px; color: #b0d8a0; }
+    .slider-row input[type=range] {
+        flex: 1;
+        accent-color: #8ec96f;
+        height: 6px;
+    }
+    .slider-row .val { width: 50px; text-align: right; color: #8ec96f; }
+    .slot {
+        width: 480px;
+        padding: 16px 24px;
+        background: #1a2a1a;
+        border: 2px solid #3a5a3a;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.15s;
+    }
+    .slot:hover { border-color: #8ec96f; background: #223422; }
+    .slot .info { text-align: left; }
+    .slot .name { font-size: 18px; color: #d8ffd0; }
+    .slot .date { font-size: 12px; color: #7a9a7a; margin-top: 4px; }
+    .slot .empty { color: #5a7a5a; font-style: italic; }
+    .slot .actions { display: flex; gap: 8px; }
+    .slot .actions button { min-width: auto; padding: 6px 14px; font-size: 12px; }
+    .row { display: flex; gap: 12px; margin-top: 20px; }
+    .credits {
+        position: absolute;
+        bottom: 16px;
+        color: #4a6a4a;
+        font-size: 11px;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<div id="hud">
+    <b>WASD</b> / стрелки — движение<br>
+    <b>Пробел</b> — атака<br>
+    <b>E</b> — предмет<br>
+    <b>Z</b> — сон<br>
+    <b>Esc</b> — пауза
+</div>
+
+<!-- ГЛАВНОЕ МЕНЮ -->
+<div id="menuMain" class="screen">
+    <h1>PIXEL FARM</h1>
+    <button id="btnNew">Новая игра</button>
+    <button id="btnLoad">Загрузить игру</button>
+    <button id="btnSettings">Настройки</button>
+    <div class="credits">v1.0 — Stardew style demo</div>
+</div>
+
+<!-- НАСТРОЙКИ -->
+<div id="menuSettings" class="screen hidden">
+    <h2>Настройки</h2>
+    <div class="slider-row">
+        <label>Музыка</label>
+        <input type="range" id="musicVol" min="0" max="100" value="40">
+        <span class="val" id="musicVal">40%</span>
+    </div>
+    <div class="slider-row">
+        <label>Звуки</label>
+        <input type="range" id="sfxVol" min="0" max="100" value="70">
+        <span class="val" id="sfxVal">70%</span>
+    </div>
+    <div class="row">
+        <button id="btnBackFromSettings" class="small">Назад</button>
+    </div>
+</div>
+
+<!-- СОХРАНЕНИЯ -->
+<div id="menuSaves" class="screen hidden">
+    <h2 id="savesTitle">Сохранения</h2>
+    <div id="slotsContainer"></div>
+    <div class="row">
+        <button id="btnBackFromSaves" class="small">Назад</button>
+    </div>
+</div>
+
+<!-- ПАУЗА -->
+<div id="menuPause" class="screen hidden">
+    <h2>Пауза</h2>
+    <button id="btnResume">Продолжить</button>
+    <button id="btnSavePause">Сохранить</button>
+    <button id="btnSettingsPause">Настройки</button>
+    <button id="btnToMain" class="danger">В главное меню</button>
+</div>
+
+<script>
+// ============================================================
+// КОНСТАНТЫ
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const SCALE = 2;
+ctx.scale(SCALE, SCALE);
+const WIDTH = canvas.width / SCALE;   // 400
+const HEIGHT = canvas.height / SCALE; // 300
+const TILE_SIZE = 32;
+const MAP_COLS = 20;
+const MAP_ROWS = 15;
+
+// Смещение тайлсета в исходной картинке (правый верхний угол)
+// Спрайт-лист персонажа занимает 288px (9 колонок x 32px) + небольшой отступ
+const TILESET_X = 304;
+const TILESET_Y = 0;
+const TILESET_COLS = 8;
+
+// ============================================================
+// АУДИО МОДУЛЬ (процедурная генерация звуков)
+// ============================================================
+const Audio = {
+    ctx: null,
+    musicGain: null,
+    sfxGain: null,
+    musicTimer: null,
+    musicPlaying: false,
+    musicVol: 0.4,
+    sfxVol: 0.7,
+
+    init() {
+        if (this.ctx) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.musicGain = this.ctx.createGain();
+            this.musicGain.gain.value = this.musicVol;
+            this.musicGain.connect(this.ctx.destination);
+
+            this.sfxGain = this.ctx.createGain();
+            this.sfxGain.gain.value = this.sfxVol;
+            this.sfxGain.connect(this.ctx.destination);
+        } catch (e) {
+            console.warn('Audio unavailable', e);
+        }
+    },
+
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+
+    setMusicVol(v) {
+        this.musicVol = v;
+        if (this.musicGain) this.musicGain.gain.value = v;
+    },
+
+    setSfxVol(v) {
+        this.sfxVol = v;
+        if (this.sfxGain) this.sfxGain.gain.value = v;
+    },
+
+    play(type) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const out = this.sfxGain;
+
+        if (type === 'step') {
+            // шумовой щелчок шага
+            const buf = this.ctx.createBuffer(1, 900, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/150);
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+            const flt = this.ctx.createBiquadFilter();
+            flt.type = 'lowpass';
+            flt.frequency.value = 900;
+            src.connect(flt).connect(out);
+            src.start(now);
+        }
+        else if (type === 'attack') {
+            const osc = this.ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(900, now);
+            osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0.35, now);
+            g.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+            osc.connect(g).connect(out);
+            osc.start(now);
+            osc.stop(now + 0.2);
+            // металлический оттенок
+            const osc2 = this.ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(1400, now);
+            osc2.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+            const g2 = this.ctx.createGain();
+            g2.gain.setValueAtTime(0.15, now);
+            g2.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc2.connect(g2).connect(out);
+            osc2.start(now);
+            osc2.stop(now + 0.12);
+        }
+        else if (type === 'item') {
+            // магический чайм (2 ноты)
+            [523.25, 783.99, 1046.5].forEach((freq, i) => {
+                const t = now + i * 0.06;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const g = this.ctx.createGain();
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(0.25, t + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.connect(g).connect(out);
+                osc.start(t);
+                osc.stop(t + 0.4);
+            });
+        }
+        else if (type === 'sleep') {
+            const osc = this.ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(90, now);
+            osc.frequency.linearRampToValueAtTime(70, now + 0.7);
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.3, now + 0.25);
+            g.gain.linearRampToValueAtTime(0.0, now + 0.85);
+            osc.connect(g).connect(out);
+            osc.start(now);
+            osc.stop(now + 0.9);
+        }
+        else if (type === 'click') {
+            const osc = this.ctx.createOscillator();
+            osc.type = 'square';
+            osc.frequency.value = 880;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0.12, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            osc.connect(g).connect(out);
+            osc.start(now);
+            osc.stop(now + 0.07);
+        }
+    },
+
+    startMusic() {
+        if (!this.ctx || this.musicPlaying) return;
+        this.musicPlaying = true;
+        // Простая пасторальная мелодия
+        const melody = [
+            { f: 392.00, d: 0.5 }, // G4
+            { f: 440.00, d: 0.5 }, // A4
+            { f: 493.88, d: 0.5 }, // B4
+            { f: 587.33, d: 1.0 }, // D5
+            { f: 523.25, d: 0.5 }, // C5
+            { f: 493.88, d: 0.5 }, // B4
+            { f: 440.00, d: 0.5 }, // A4
+            { f: 392.00, d: 1.0 }, // G4
+            { f: 349.23, d: 0.5 }, // F4
+            { f: 392.00, d: 0.5 }, // G4
+            { f: 440.00, d: 0.5 }, // A4
+            { f: 493.88, d: 1.5 }, // B4
+        ];
+        let idx = 0;
+        const step = () => {
+            if (!this.musicPlaying || !this.ctx) return;
+            const note = melody[idx];
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.value = note.f;
+            const g = this.ctx.createGain();
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.18, t + 0.04);
+            g.gain.linearRampToValueAtTime(0.10, t + note.d * 0.6);
+            g.gain.linearRampToValueAtTime(0, t + note.d);
+            osc.connect(g).connect(this.musicGain);
+            osc.start(t);
+            osc.stop(t + note.d);
+            idx = (idx + 1) % melody.length;
+        };
+        step();
+        this.musicTimer = setInterval(step, 500);
+    },
+
+    stopMusic() {
+        this.musicPlaying = false;
+        if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+    }
+};
+
+// ============================================================
+// АССЕТЫ
+// ============================================================
+const assets = new Image();
+let assetsLoaded = false;
+assets.onload = () => { assetsLoaded = true; };
+assets.onerror = () => {
+    console.error('Не удалось загрузить assets.png');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+    ctx.fillStyle = '#f00';
+    ctx.font = '16px Arial';
+    ctx.fillText('Ошибка: не найден assets.png', 20, 100);
+};
+assets.src = 'assets.png';
+
+// ============================================================
+// КОНФИГ АНИМАЦИЙ (координаты из спрайт-листа)
+// ============================================================
+const animConfig = {
+    idle:      { y: 0,   frames: 2, speed: 250, loop: true,  stepFrames: [] },
+    walkDown:  { y: 32,  frames: 4, speed: 125, loop: true,  stepFrames: [0, 2] },
+    walkUp:    { y: 64,  frames: 4, speed: 125, loop: true,  stepFrames: [0, 2] },
+    walkLeft:  { y: 96,  frames: 4, speed: 125, loop: true,  stepFrames: [0, 2] },
+    walkRight: { y: 128, frames: 4, speed: 125, loop: true,  stepFrames: [0, 2] },
+    attack:    { y: 160, frames: 4, speed: 90,  loop: false, stepFrames: [] },
+    death:     { y: 192, frames: 4, speed: 120, loop: false, stepFrames: [] },
+    sleep:     { y: 224, frames: 2, speed: 400, loop: true,  stepFrames: [] },
+    useItem:   { y: 256, frames: 4, speed: 110, loop: false, stepFrames: [] },
+};
+
+// ============================================================
+// КАРТА (0=трава, 8=тропа, 16=дерево, 24=камень, 41-42=грядки, 45-46=вода)
+// ============================================================
+const DEFAULT_MAP = [
+    [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16],
+    [16, 0, 1, 0, 0, 0, 0, 0, 0, 8, 8, 8, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 2, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0,24, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0,45,46,46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0,45,46,46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0,41,42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0,41,42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,16],
+    [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+];
+
+const SOLID_TILES = [16, 17, 24, 25, 32, 33, 45, 46];
+
+let mapData = DEFAULT_MAP.map(r => r.slice());
+
+// ============================================================
+// ИГРОК
+// ============================================================
+function createPlayer() {
+    return {
+        x: 320, y: 240,
+        width: 32, height: 32,
+        speed: 1.6,
+        vx: 0, vy: 0,
+        state: 'idle',
+        direction: 'down',
+        frameIndex: 0,
+        frameTimer: 0,
+        isMoving: false,
+        stepSoundPlayed: false,
+        lastStepFrame: -1,
+        actionLock: false,
+    };
+}
+
+let player = createPlayer();
+
+const camera = { x: 0, y: 0 };
+
+// ============================================================
+// СОСТОЯНИЕ ИГРЫ
+// ============================================================
+const GameState = {
+    MAIN_MENU: 'main_menu',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    SETTINGS: 'settings',
+    SAVES: 'saves',
+};
+let gameState = GameState.MAIN_MENU;
+
+const keys = {};
+
+// ============================================================
+// ЗВУКОВЫЕ НАСТРОЙКИ (сохранение)
+// ============================================================
+function loadAudioSettings() {
+    try {
+        const s = JSON.parse(localStorage.getItem('pixelfarm_audio') || '{}');
+        if (typeof s.music === 'number') Audio.musicVol = s.music;
+        if (typeof s.sfx === 'number') Audio.sfxVol = s.sfx;
+    } catch(e) {}
+}
+function saveAudioSettings() {
+    try {
+        localStorage.setItem('pixelfarm_audio', JSON.stringify({
+            music: Audio.musicVol,
+            sfx: Audio.sfxVol
+        }));
+    } catch(e) {}
+}
+loadAudioSettings();
+
+// ============================================================
+// СОХРАНЕНИЯ
+// ============================================================
+function saveGame(slot) {
+    const data = {
+        player: {
+            x: player.x, y: player.y,
+            direction: player.direction,
+            state: 'idle',
+        },
+        map: mapData,
+        timestamp: Date.now(),
+    };
+    try {
+        localStorage.setItem('pixelfarm_save_' + slot, JSON.stringify(data));
+        return true;
+    } catch(e) {
+        console.error('Save error', e);
+        return false;
+    }
+}
+
+function loadGame(slot) {
+    try {
+        const raw = localStorage.getItem('pixelfarm_save_' + slot);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        player = createPlayer();
+        player.x = data.player.x;
+        player.y = data.player.y;
+        player.direction = data.player.direction || 'down';
+        mapData = data.map || DEFAULT_MAP.map(r => r.slice());
+        return true;
+    } catch(e) {
+        console.error('Load error', e);
+        return false;
+    }
+}
+
+function getSaveInfo(slot) {
+    try {
+        const raw = localStorage.getItem('pixelfarm_save_' + slot);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        return { timestamp: data.timestamp };
+    } catch(e) { return null; }
+}
+
+function deleteSave(slot) {
+    try { localStorage.removeItem('pixelfarm_save_' + slot); } catch(e) {}
+}
+
+// ============================================================
+// UI / МЕНЮ
+// ============================================================
+const ui = {
+    main: document.getElementById('menuMain'),
+    settings: document.getElementById('menuSettings'),
+    saves: document.getElementById('menuSaves'),
+    pause: document.getElementById('menuPause'),
+    savesTitle: document.getElementById('savesTitle'),
+    slotsContainer: document.getElementById('slotsContainer'),
+    musicVol: document.getElementById('musicVol'),
+    sfxVol: document.getElementById('sfxVol'),
+    musicVal: document.getElementById('musicVal'),
+    sfxVal: document.getElementById('sfxVal'),
+    hud: document.getElementById('hud'),
+};
+
+let savesMode = 'load'; // 'load' | 'save'
+
+function showScreen(name) {
+    [ui.main, ui.settings, ui.saves, ui.pause].forEach(s => s.classList.add('hidden'));
+    if (name === 'main') ui.main.classList.remove('hidden');
+    if (name === 'settings') {
+        ui.musicVol.value = Math.round(Audio.musicVol * 100);
+        ui.sfxVol.value = Math.round(Audio.sfxVol * 100);
+        ui.musicVal.textContent = Math.round(Audio.musicVol * 100) + '%';
+        ui.sfxVal.textContent = Math.round(Audio.sfxVol * 100) + '%';
+        ui.settings.classList.remove('hidden');
+    }
+    if (name === 'saves') { renderSlots(); ui.saves.classList.remove('hidden'); }
+    if (name === 'pause') ui.pause.classList.remove('hidden');
+    if (name === 'none') {
+        ui.hud.style.display = 'block';
+    } else {
+        ui.hud.style.display = 'none';
+    }
+}
+
+function formatDate(ts) {
+    const d = new Date(ts);
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function renderSlots() {
+    ui.savesTitle.textContent = savesMode === 'load' ? 'Загрузить игру' : 'Сохранить игру';
+    ui.slotsContainer.innerHTML = '';
+    for (let i = 1; i <= 3; i++) {
+        const info = getSaveInfo(i);
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        if (info) {
+            slot.innerHTML = `
+                <div class="info">
+                    <div class="name">Слот ${i}</div>
+                    <div class="date">${formatDate(info.timestamp)}</div>
+                </div>
+            `;
+            if (savesMode === 'load') {
+                slot.addEventListener('click', () => {
+                    Audio.play('click');
+                    if (loadGame(i)) startGame();
+                });
+            } else {
+                // режим сохранения
+                const btn = document.createElement('button');
+                btn.className = 'small';
+                btn.textContent = 'Перезаписать';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    Audio.play('click');
+                    saveGame(i);
+                    renderSlots();
+                };
+                const del = document.createElement('button');
+                del.className = 'small danger';
+                del.textContent = 'Удалить';
+                del.onclick = (e) => {
+                    e.stopPropagation();
+                    Audio.play('click');
+                    deleteSave(i);
+                    renderSlots();
+                };
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+                actions.appendChild(btn);
+                actions.appendChild(del);
+                slot.appendChild(actions);
+            }
+        } else {
+            slot.innerHTML = `<div class="info"><div class="name empty">Слот ${i} — пусто</div></div>`;
+            if (savesMode === 'save') {
+                slot.addEventListener('click', () => {
+                    Audio.play('click');
+                    saveGame(i);
+                    renderSlots();
+                });
+            }
+        }
+        ui.slotsContainer.appendChild(slot);
+    }
+}
+
+// ============================================================
+// КНОПКИ МЕНЮ
+// ============================================================
+document.getElementById('btnNew').onclick = () => {
+    Audio.init(); Audio.resume();
+    Audio.play('click');
+    player = createPlayer();
+    mapData = DEFAULT_MAP.map(r => r.slice());
+    startGame();
+};
+
+document.getElementById('btnLoad').onclick = () => {
+    Audio.init(); Audio.resume();
+    Audio.play('click');
+    savesMode = 'load';
+    showScreen('saves');
+};
+
+document.getElementById('btnSettings').onclick = () => {
+    Audio.init(); Audio.resume();
+    Audio.play('click');
+    showScreen('settings');
+};
+
+document.getElementById('btnBackFromSettings').onclick = () => {
+    Audio.play('click');
+    if (gameState === GameState.PLAYING || gameState === GameState.PAUSED) {
+        showScreen('pause');
+        gameState = GameState.PAUSED;
+    } else {
+        showScreen('main');
+        gameState = GameState.MAIN_MENU;
+    }
+};
+
+document.getElementById('btnBackFromSaves').onclick = () => {
+    Audio.play('click');
+    if (gameState === GameState.PLAYING || gameState === GameState.PAUSED) {
+        showScreen('pause');
+        gameState = GameState.PAUSED;
+    } else {
+        showScreen('main');
+        gameState = GameState.MAIN_MENU;
+    }
+};
+
+document.getElementById('btnResume').onclick = () => {
+    Audio.play('click');
+    resumeGame();
+};
+
+document.getElementById('btnSavePause').onclick = () => {
+    Audio.play('click');
+    savesMode = 'save';
+    showScreen('saves');
+};
+
+document.getElementById('btnSettingsPause').onclick = () => {
+    Audio.play('click');
+    showScreen('settings');
+};
+
+document.getElementById('btnToMain').onclick = () => {
+    Audio.play('click');
+    if (confirm('Выйти в главное меню? Несохранённый прогресс будет потерян.')) {
+        gameState = GameState.MAIN_MENU;
+        showScreen('main');
+        Audio.stopMusic();
+    }
+};
+
+// Настройки громкости
+ui.musicVol.oninput = (e) => {
+    const v = parseInt(e.target.value) / 100;
+    Audio.setMusicVol(v);
+    ui.musicVal.textContent = e.target.value + '%';
+    saveAudioSettings();
+};
+ui.sfxVol.oninput = (e) => {
+    const v = parseInt(e.target.value) / 100;
+    Audio.setSfxVol(v);
+    ui.sfxVal.textContent = e.target.value + '%';
+    saveAudioSettings();
+    Audio.play('click');
+};
+
+// ============================================================
+// СТАРТ/ПАУЗА
+// ============================================================
+function startGame() {
+    gameState = GameState.PLAYING;
+    showScreen('none');
+    Audio.init();
+    Audio.resume();
+    Audio.startMusic();
+}
+
+function pauseGame() {
+    if (gameState !== GameState.PLAYING) return;
+    gameState = GameState.PAUSED;
+    showScreen('pause');
+}
+
+function resumeGame() {
+    gameState = GameState.PLAYING;
+    showScreen('none');
+    Audio.resume();
+}
+
+// ============================================================
+// УПРАВЛЕНИЕ
+// ============================================================
+window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    keys[k] = true;
+
+    if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+
+    if (k === 'escape') {
+        if (gameState === GameState.PLAYING) pauseGame();
+        else if (gameState === GameState.PAUSED) resumeGame();
+        return;
+    }
+
+    if (gameState !== GameState.PLAYING) return;
+
+    // Нельзя прерывать атаку/предмет/сон другими действиями
+    if (player.state === 'attack' || player.state === 'useItem') return;
+
+    if (k === ' ') {
+        player.state = 'attack';
+        player.frameIndex = 0;
+        player.frameTimer = 0;
+        Audio.play('attack');
+    } else if (k === 'e') {
+        player.state = 'useItem';
+        player.frameIndex = 0;
+        player.frameTimer = 0;
+        Audio.play('item');
+    } else if (k === 'z') {
+        if (player.state !== 'sleep') {
+            player.state = 'sleep';
+            player.frameIndex = 0;
+            player.frameTimer = 0;
+            Audio.play('sleep');
+        }
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+// ============================================================
+// ЛОГИКА
+// ============================================================
+function isSolidAt(px, py) {
+    const col = Math.floor(px / TILE_SIZE);
+    const row = Math.floor(py / TILE_SIZE);
+    if (col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) return true;
+    const tile = mapData[row][col];
+    return SOLID_TILES.includes(tile);
+}
+
+function checkCollision(nextX, nextY) {
+    const padX = 8;
+    const padTop = 18;
+    const padBottom = 4;
+    const left = nextX + padX;
+    const right = nextX + 32 - padX;
+    const top = nextY + padTop;
+    const bottom = nextY + 32 - padBottom;
+    return isSolidAt(left, top) || isSolidAt(right, top) ||
+           isSolidAt(left, bottom) || isSolidAt(right, bottom);
+}
+
+function update(dt) {
+    if (gameState !== GameState.PLAYING) return;
+    if (!assetsLoaded) return;
+
+    // === СОСТОЯНИЕ: СОН ===
+    if (player.state === 'sleep') {
+        const moving = keys['w']||keys['a']||keys['s']||keys['d']||
+                       keys['arrowup']||keys['arrowleft']||keys['arrowdown']||keys['arrowright'];
+        if (moving) {
+            player.state = 'idle';
+            player.frameIndex = 0;
+            player.frameTimer = 0;
+        } else {
+            player.frameTimer += dt;
+            const cfg = animConfig.sleep;
+            if (player.frameTimer > cfg.speed) {
+                player.frameTimer = 0;
+                player.frameIndex = (player.frameIndex + 1) % cfg.frames;
+                // Храп
+                if (player.frameIndex === 0) Audio.play('sleep');
+            }
+            return;
+        }
+    }
+
+    // === СОСТОЯНИЕ: АТАКА / ПРЕДМЕТ ===
+    if (player.state === 'attack' || player.state === 'useItem') {
+        player.frameTimer += dt;
+        const cfg = animConfig[player.state];
+        if (player.frameTimer > cfg.speed) {
+            player.frameTimer = 0;
+            player.frameIndex++;
+            if (player.frameIndex >= cfg.frames) {
+                player.state = 'idle';
+                player.frameIndex = 0;
+                player.frameTimer = 0;
+            }
+        }
+        return;
+    }
+
+    // === ДВИЖЕНИЕ ===
+    player.vx = 0; player.vy = 0; player.isMoving = false;
+    let dx = 0, dy = 0;
+    if (keys['w'] || keys['arrowup'])    { dy = -1; player.direction = 'up'; }
+    if (keys['s'] || keys['arrowdown'])  { dy =  1; player.direction = 'down'; }
+    if (keys['a'] || keys['arrowleft'])  { dx = -1; player.direction = 'left'; }
+    if (keys['d'] || keys['arrowright']) { dx =  1; player.direction = 'right'; }
+
+    // Нормализация для диагоналей
+    if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+
+    if (dx !== 0 || dy !== 0) player.isMoving = true;
+
+    player.vx = dx * player.speed;
+    player.vy = dy * player.speed;
+
+    if (player.vx !== 0) {
+        const nx = player.x + player.vx;
+        if (!checkCollision(nx, player.y)) player.x = nx;
+    }
+    if (player.vy !== 0) {
+        const ny = player.y + player.vy;
+        if (!checkCollision(player.x, ny)) player.y = ny;
+    }
+
+    // === АНИМАЦИЯ ===
+    let animState = 'idle';
+    if (player.isMoving) {
+        animState = 'walk' + player.direction.charAt(0).toUpperCase() + player.direction.slice(1);
+    }
+
+    if (player.state !== animState) {
+        player.state = animState;
+        player.frameIndex = 0;
+        player.frameTimer = 0;
+        player.lastStepFrame = -1;
+    }
+
+    player.frameTimer += dt;
+    const cfg = animConfig[player.state];
+    if (player.frameTimer > cfg.speed) {
+        player.frameTimer = 0;
+        const prevIdx = player.frameIndex;
+        if (cfg.loop) {
+            player.frameIndex = (player.frameIndex + 1) % cfg.frames;
+        } else {
+            if (player.frameIndex < cfg.frames - 1) player.frameIndex++;
+        }
+        // Звук шага на определённых кадрах
+        if (cfg.stepFrames && cfg.stepFrames.includes(player.frameIndex) &&
+            player.frameIndex !== prevIdx && player.isMoving) {
+            Audio.play('step');
+        }
+    }
+
+    // === КАМЕРА ===
+    camera.x = player.x - WIDTH / 2 + 16;
+    camera.y = player.y - HEIGHT / 2 + 16;
+    camera.x = Math.max(0, Math.min(camera.x, MAP_COLS * TILE_SIZE - WIDTH));
+    camera.y = Math.max(0, Math.min(camera.y, MAP_ROWS * TILE_SIZE - HEIGHT));
+}
+
+// ============================================================
+// ОТРИСОВКА
+// ============================================================
+function draw() {
+    // Фон
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    if (!assetsLoaded) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Загрузка...', WIDTH/2, HEIGHT/2);
+        ctx.textAlign = 'left';
+        return;
+    }
+
+    ctx.save();
+    ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+
+    // === ТАЙЛЫ ===
+    const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+    const endCol = Math.min(MAP_COLS - 1, Math.ceil((camera.x + WIDTH) / TILE_SIZE));
+    const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+    const endRow = Math.min(MAP_ROWS - 1, Math.ceil((camera.y + HEIGHT) / TILE_SIZE));
+
+    for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col <= endCol; col++) {
+            const idx = mapData[row][col];
+            const tCol = idx % TILESET_COLS;
+            const tRow = Math.floor(idx / TILESET_COLS);
+            const sx = TILESET_X + tCol * TILE_SIZE;
+            const sy = TILESET_Y + tRow * TILE_SIZE;
+            ctx.drawImage(assets, sx, sy, TILE_SIZE, TILE_SIZE,
+                          col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
+    // === ИГРОК ===
+    const cfg = animConfig[player.state] || animConfig.idle;
+    const sx = player.frameIndex * TILE_SIZE;
+    const sy = cfg.y;
+
+    // Тень под игроком
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(player.x + 16, player.y + 30, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.drawImage(assets, sx, sy, TILE_SIZE, TILE_SIZE,
+                  Math.round(player.x), Math.round(player.y), TILE_SIZE, TILE_SIZE);
+
+    ctx.restore();
+
+    // === HUD ===
+    if (gameState === GameState.PLAYING) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(8, HEIGHT - 26, 160, 20);
+        ctx.fillStyle = '#8ec96f';
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`State: ${player.state}`, 14, HEIGHT - 12);
+    }
+}
+
+// ============================================================
+// ИГРОВОЙ ЦИКЛ
+// ============================================================
+let lastTime = performance.now();
+
+function gameLoop(now) {
+    let dt = now - lastTime;
+    lastTime = now;
+    if (dt > 100) dt = 100;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+showScreen('main');
+requestAnimationFrame(gameLoop);
+
+// Пауза при потере фокуса
+window.addEventListener('blur', () => {
+    if (gameState === GameState.PLAYING) pauseGame();
+});
+</script>
+</body>
+</html>
