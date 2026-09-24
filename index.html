@@ -1,0 +1,2778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<title>Pixel Farm</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Courier New',monospace;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none;position:fixed;top:0;left:0}
+#wrap{position:fixed;inset:0;display:flex;justify-content:center;align-items:center;background:#0a0a1a;overflow:hidden}
+#cv{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:pointer}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(135deg,#2a3a2a,#0d0d0d);z-index:100;padding:14px;gap:8px;overflow-y:auto}
+.screen.hidden{display:none}
+.screen h1{font-size:clamp(24px,7vw,48px);letter-spacing:5px;color:#e8c060;text-shadow:0 4px 0 #5a3a1a;margin-bottom:8px;text-align:center}
+.screen h2{font-size:clamp(16px,4.5vw,24px);color:#e8c060;margin-bottom:8px;letter-spacing:2px}
+.screen button{background:#5a3a1a;color:#ffe8b0;border:2px solid #8a5a2a;padding:10px 22px;font-size:clamp(12px,3.2vw,15px);cursor:pointer;border-radius:4px;font-family:inherit;letter-spacing:1px;min-width:180px;max-width:92vw;font-weight:bold}
+.screen button:hover{background:#7a4a2a;border-color:#e8c060}
+.screen button:active{transform:scale(.97)}
+.screen button.primary{background:#4a7a2a;border-color:#8ac04a;color:#f0ffe0}
+.screen button.small{min-width:90px;padding:6px 14px;font-size:11px}
+#notify{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#ffe8b0;padding:6px 14px;border-radius:4px;font-size:12px;z-index:70;opacity:0;transition:opacity .25s;pointer-events:none;border:2px solid #8a5a2a;font-weight:bold;max-width:80vw;text-align:center}
+#notify.show{opacity:1}
+#fade{position:fixed;inset:0;background:#0a0a1a;opacity:0;pointer-events:none;z-index:60;transition:opacity .5s}
+#fade.active{opacity:1}
+#centerText{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:61;pointer-events:none;color:#ffe8b0;gap:6px;text-align:center;text-shadow:0 2px 12px #000}
+#centerText.show{display:flex}
+#centerText .big{font-size:clamp(20px,5vw,32px);letter-spacing:3px;color:#e8c060}
+#centerText .small{font-size:clamp(11px,3vw,14px);color:#8ac04a}
+.panel{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:90;display:none;flex-direction:column;justify-content:center;align-items:center;padding:12px;gap:6px;overflow-y:auto}
+.panel.show{display:flex}
+.panel h2{color:#e8c060;font-size:16px;letter-spacing:2px}
+.panel .sub{color:#8ac04a;font-size:11px;margin-bottom:2px}
+.panel .content{display:flex;flex-direction:column;gap:3px;max-width:94vw;max-height:70vh;overflow-y:auto;padding:4px;width:min(520px,94vw)}
+.row{display:flex;align-items:center;gap:6px;background:#2a1a0a;border:2px solid #8a5a2a;padding:6px 10px;border-radius:3px;justify-content:space-between}
+.row .name{color:#ffe8b0;font-size:11px;flex:1;line-height:1.3}
+.row .price{color:#e8c060;font-weight:bold;min-width:50px;text-align:right;font-size:11px}
+.row button{min-width:60px;padding:4px 8px;font-size:10px;background:#4a7a2a;border-color:#8ac04a}
+.row.selected{border-color:#e8c060;background:#4a3a1a}
+.panel .close{background:#4a2020;border-color:#8a3a3a;color:#ffb0b0;padding:8px 24px;margin-top:4px}
+.tabs{display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;justify-content:center}
+.tabs button{min-width:auto;padding:5px 10px;font-size:10px;background:#3a2a1a;border-color:#6a4a2a}
+.tabs button.active{background:#4a7a2a;border-color:#8ac04a}
+.swatch{width:28px;height:28px;border:2px solid #8a5a2a;border-radius:3px;cursor:pointer;display:inline-block}
+.swatch.active{border-color:#e8c060;box-shadow:0 0 6px #e8c060}
+.color-row{display:flex;gap:6px;flex-wrap:wrap;padding:6px;justify-content:center;background:#1a1a0a;border-radius:4px;border:1px solid #5a3a1a}
+.opt-label{color:#e8c060;font-size:11px;margin-top:6px;margin-bottom:2px;text-align:center}
+#questList{position:fixed;top:100px;left:4px;background:rgba(0,0,0,.8);padding:5px 8px;border-radius:3px;font-size:10px;z-index:45;color:#ffe8b0;border:1px solid #8a5a2a;max-width:200px;display:none}
+#questList.show{display:block}
+#questList .q{color:#e8c060;margin-bottom:2px;font-weight:bold}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv" width="800" height="600"></canvas></div>
+<div id="notify"></div><div id="fade"></div><div id="centerText"></div><div id="questList"></div>
+
+<div id="panelShop" class="panel"><h2 id="shopTitle">SHOP</h2><div class="sub" id="shopSub"></div><div class="content" id="shopItems"></div><button class="close" id="closeShop">Close</button></div>
+<div id="panelInv" class="panel"><h2 id="invTitle">INVENTORY</h2><div class="content" id="invItems"></div><button class="close" id="closeInv">Close</button></div>
+<div id="panelMap" class="panel"><h2 id="mapTitle">MAP</h2><div class="content" id="mapInfo"></div><button class="close" id="closeMap">Close</button></div>
+<div id="panelQuest" class="panel"><h2 id="questTitle">QUESTS</h2><div class="content" id="questItems"></div><button class="close" id="closeQuest">Close</button></div>
+<div id="panelSettings" class="panel"><h2 id="setTitle">SETTINGS</h2><div class="content" id="setItems"></div><button class="close" id="closeSet">Close</button></div>
+<div id="panelCustom" class="panel"><h2 id="custTitle">CHARACTER</h2><div class="content" id="custItems"></div><button class="close" id="closeCust">Close</button></div>
+
+<div id="menuMain" class="screen">
+  <h1 id="titleText">PIXEL FARM</h1>
+  <button id="btnNew" class="primary">New Game</button>
+  <button id="btnContinue">Continue</button>
+  <button id="btnSettings">Settings</button>
+  <button id="btnHelp">Controls</button>
+</div>
+<div id="menuHelp" class="screen hidden">
+  <h2 id="helpTitle">CONTROLS</h2>
+  <div id="helpBody" style="max-width:480px;text-align:left;font-size:11px;line-height:1.8;color:#ffe8b0"></div>
+  <button id="btnHelpBack" class="small">Back</button>
+</div>
+<div id="menuPause" class="screen hidden">
+  <h2 id="pauseTitle">PAUSED</h2>
+  <button id="btnResume" class="primary">Resume</button>
+  <button id="btnSave2">Save</button>
+  <button id="btnSettings2" class="small">Settings</button>
+  <button id="btnToMain" class="small">Main Menu</button>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ============================================================
+// i18n
+// ============================================================
+const I18N = {
+  en:{newGame:'New Game',cont:'Continue',settings:'Settings',controls:'Controls',back:'Back',
+    resume:'Resume',save:'Save',mainMenu:'Main Menu',paused:'PAUSED',inventory:'INVENTORY',
+    map:'MAP',quests:'QUESTS',character:'CHARACTER',shop:'SHOP',close:'Close',
+    day:'Day',gold:'Gold',energy:'Energy',hp:'HP',quest:'Quest',
+    farm:'Farm',town:'Town',beach:'Beach',forest:'Forest',mountain:'Mountain',mine:'Mine',
+    spring:'Spring',summer:'Summer',fall:'Fall',winter:'Winter',
+    sunny:'Sunny',rain:'Rain',storm:'Storm',snow:'Snow',fog:'Fog',
+    buy:'Buy',sell:'Sell',language:'Language',skin:'Skin',hair:'Hair',shirt:'Shirt',
+    pants:'Pants',hat:'Hat',shoes:'Shoes',customize:'Customize Character',
+    weapon:'Weapon',damage:'Damage',speed:'Speed',crit:'Crit',range:'Range',
+    noSave:'No save file',saved:'Saved!',notEnoughGold:'Not enough gold!',notEnoughRes:'Not enough resources!',
+    helpText:'Tap ground to walk. Tap objects to interact. WASD to move. 1-7 select tool. E door/sleep. I inventory. M map. Q quests. H horse. Esc pause.',
+    noHorse:'No horse',mounted:'Mounted! (H to dismount)',walk:'Walk',animalAdult:'Adult',notAdult:'Still young',
+    invalidAction:'Cannot do that'},
+  ru:{newGame:'Новая игра',cont:'Продолжить',settings:'Настройки',controls:'Управление',back:'Назад',
+    resume:'Продолжить',save:'Сохранить',mainMenu:'В меню',paused:'ПАУЗА',inventory:'ИНВЕНТАРЬ',
+    map:'КАРТА',quests:'КВЕСТЫ',character:'ПЕРСОНАЖ',shop:'ЛАВКА',close:'Закрыть',
+    day:'День',gold:'Золото',energy:'Энергия',hp:'Здоровье',quest:'Квест',
+    farm:'Ферма',town:'Город',beach:'Пляж',forest:'Лес',mountain:'Горы',mine:'Шахта',
+    spring:'Весна',summer:'Лето',fall:'Осень',winter:'Зима',
+    sunny:'Ясно',rain:'Дождь',storm:'Гроза',snow:'Снег',fog:'Туман',
+    buy:'Купить',sell:'Продать',language:'Язык',skin:'Кожа',hair:'Волосы',shirt:'Рубашка',
+    pants:'Штаны',hat:'Шляпа',shoes:'Обувь',customize:'Настройка персонажа',
+    weapon:'Оружие',damage:'Урон',speed:'Скорость',crit:'Крит',range:'Дальность',
+    noSave:'Нет сохранения',saved:'Сохранено!',notEnoughGold:'Мало золота!',notEnoughRes:'Мало ресурсов!',
+    helpText:'Тап по земле — идти. Тап по объектам — взаимодействовать. WASD — движение. 1-7 инструмент. E — дверь/сон. I — инвентарь. M — карта. Q — квесты. H — лошадь. Esc — пауза.',
+    noHorse:'Нет лошади',mounted:'Верхом! (H — слезть)',walk:'Ходить',animalAdult:'Взрослое',notAdult:'Ещё детёныш',
+    invalidAction:'Так нельзя'},
+  es:{newGame:'Nuevo juego',cont:'Continuar',settings:'Ajustes',controls:'Controles',back:'Atrás',
+    resume:'Reanudar',save:'Guardar',mainMenu:'Menú',paused:'PAUSA',inventory:'INVENTARIO',
+    map:'MAPA',quests:'MISIONES',character:'PERSONAJE',shop:'TIENDA',close:'Cerrar',
+    day:'Día',gold:'Oro',energy:'Energía',hp:'Salud',quest:'Misión',
+    farm:'Granja',town:'Pueblo',beach:'Playa',forest:'Bosque',mountain:'Montaña',mine:'Mina',
+    spring:'Primavera',summer:'Verano',fall:'Otoño',winter:'Invierno',
+    sunny:'Soleado',rain:'Lluvia',storm:'Tormenta',snow:'Nieve',fog:'Niebla',
+    buy:'Comprar',sell:'Vender',language:'Idioma',skin:'Piel',hair:'Pelo',shirt:'Camisa',
+    pants:'Pantalón',hat:'Sombrero',shoes:'Zapatos',customize:'Personalizar',
+    weapon:'Arma',damage:'Daño',speed:'Velocidad',crit:'Crítico',range:'Alcance',
+    noSave:'Sin guardado',saved:'¡Guardado!',notEnoughGold:'¡Sin oro!',notEnoughRes:'¡Sin recursos!',
+    helpText:'Toca el suelo para caminar. Toca objetos para interactuar. WASD mover. 1-7 herramienta. E puerta. I inventario. M mapa. Q misiones. H caballo. Esc pausa.',
+    noHorse:'Sin caballo',mounted:'¡Montado!',walk:'Andar',animalAdult:'Adulto',notAdult:'Joven',invalidAction:'No se puede'},
+  fr:{newGame:'Nouvelle partie',cont:'Continuer',settings:'Options',controls:'Commandes',back:'Retour',
+    resume:'Reprendre',save:'Sauvegarder',mainMenu:'Menu',paused:'PAUSE',inventory:'INVENTAIRE',
+    map:'CARTE',quests:'QUÊTES',character:'PERSONNAGE',shop:'BOUTIQUE',close:'Fermer',
+    day:'Jour',gold:'Or',energy:'Énergie',hp:'PV',quest:'Quête',
+    farm:'Ferme',town:'Ville',beach:'Plage',forest:'Forêt',mountain:'Montagne',mine:'Mine',
+    spring:'Printemps',summer:'Été',fall:'Automne',winter:'Hiver',
+    sunny:'Ensoleillé',rain:'Pluie',storm:'Orage',snow:'Neige',fog:'Brouillard',
+    buy:'Acheter',sell:'Vendre',language:'Langue',skin:'Peau',hair:'Cheveux',shirt:'Chemise',
+    pants:'Pantalon',hat:'Chapeau',shoes:'Chaussures',customize:'Personnaliser',
+    weapon:'Arme',damage:'Dégâts',speed:'Vitesse',crit:'Critique',range:'Portée',
+    noSave:'Pas de sauvegarde',saved:'Sauvegardé!',notEnoughGold:'Pas assez d\'or!',notEnoughRes:'Pas assez!',
+    helpText:'Tapez le sol pour marcher. Tapez objets. WASD bouger. 1-7 outil. E porte. I inventaire. M carte. Q quêtes. H cheval. Esc pause.',
+    noHorse:'Pas de cheval',mounted:'Monté!',walk:'Marcher',animalAdult:'Adulte',notAdult:'Jeune',invalidAction:'Impossible'},
+  de:{newGame:'Neues Spiel',cont:'Fortsetzen',settings:'Optionen',controls:'Steuerung',back:'Zurück',
+    resume:'Weiter',save:'Speichern',mainMenu:'Menü',paused:'PAUSE',inventory:'INVENTAR',
+    map:'KARTE',quests:'AUFGABEN',character:'CHARAKTER',shop:'LADEN',close:'Schließen',
+    day:'Tag',gold:'Gold',energy:'Energie',hp:'LP',quest:'Aufgabe',
+    farm:'Bauernhof',town:'Stadt',beach:'Strand',forest:'Wald',mountain:'Berg',mine:'Mine',
+    spring:'Frühling',summer:'Sommer',fall:'Herbst',winter:'Winter',
+    sunny:'Sonnig',rain:'Regen',storm:'Sturm',snow:'Schnee',fog:'Nebel',
+    buy:'Kaufen',sell:'Verkaufen',language:'Sprache',skin:'Haut',hair:'Haare',shirt:'Hemd',
+    pants:'Hose',hat:'Hut',shoes:'Schuhe',customize:'Anpassen',
+    weapon:'Waffe',damage:'Schaden',speed:'Tempo',crit:'Krit',range:'Reichweite',
+    noSave:'Kein Speicher',saved:'Gespeichert!',notEnoughGold:'Nicht genug Gold!',notEnoughRes:'Nicht genug!',
+    helpText:'Boden tippen zum Laufen. Objekte tippen. WASD bewegen. 1-7 Werkzeug. E Tür. I Inventar. M Karte. Q Aufgaben. H Pferd. Esc Pause.',
+    noHorse:'Kein Pferd',mounted:'Geritten!',walk:'Gehen',animalAdult:'Erwachsen',notAdult:'Jung',invalidAction:'Nicht möglich'},
+  pt:{newGame:'Novo jogo',cont:'Continuar',settings:'Configurações',controls:'Controles',back:'Voltar',
+    resume:'Retomar',save:'Salvar',mainMenu:'Menu',paused:'PAUSA',inventory:'INVENTÁRIO',
+    map:'MAPA',quests:'TAREFAS',character:'PERSONAGEM',shop:'LOJA',close:'Fechar',
+    day:'Dia',gold:'Ouro',energy:'Energia',hp:'Vida',quest:'Tarefa',
+    farm:'Fazenda',town:'Cidade',beach:'Praia',forest:'Floresta',mountain:'Montanha',mine:'Mina',
+    spring:'Primavera',summer:'Verão',fall:'Outono',winter:'Inverno',
+    sunny:'Ensolarado',rain:'Chuva',storm:'Tempestade',snow:'Neve',fog:'Névoa',
+    buy:'Comprar',sell:'Vender',language:'Idioma',skin:'Pele',hair:'Cabelo',shirt:'Camisa',
+    pants:'Calça',hat:'Chapéu',shoes:'Sapatos',customize:'Personalizar',
+    weapon:'Arma',damage:'Dano',speed:'Velocidade',crit:'Crítico',range:'Alcance',
+    noSave:'Sem save',saved:'Salvo!',notEnoughGold:'Sem ouro!',notEnoughRes:'Sem recursos!',
+    helpText:'Toque no chão. Toque objetos. WASD mover. 1-7 ferramenta. E porta. I inventário. M mapa. Q tarefas. H cavalo. Esc pausa.',
+    noHorse:'Sem cavalo',mounted:'Montado!',walk:'Andar',animalAdult:'Adulto',notAdult:'Jovem',invalidAction:'Impossível'},
+  zh:{newGame:'新游戏',cont:'继续',settings:'设置',controls:'操作',back:'返回',
+    resume:'继续',save:'保存',mainMenu:'主菜单',paused:'暂停',inventory:'背包',
+    map:'地图',quests:'任务',character:'角色',shop:'商店',close:'关闭',
+    day:'天',gold:'金币',energy:'体力',hp:'生命',quest:'任务',
+    farm:'农场',town:'城镇',beach:'海滩',forest:'森林',mountain:'山',mine:'矿洞',
+    spring:'春',summer:'夏',fall:'秋',winter:'冬',
+    sunny:'晴',rain:'雨',storm:'暴风雨',snow:'雪',fog:'雾',
+    buy:'购买',sell:'出售',language:'语言',skin:'皮肤',hair:'头发',shirt:'衣服',
+    pants:'裤子',hat:'帽子',shoes:'鞋',customize:'自定义角色',
+    weapon:'武器',damage:'伤害',speed:'速度',crit:'暴击',range:'范围',
+    noSave:'无存档',saved:'已保存!',notEnoughGold:'金币不足!',notEnoughRes:'资源不足!',
+    helpText:'点击地面移动。点击物品互动。WASD移动。1-7选工具。E门/睡觉。I背包。M地图。Q任务。H马。Esc暂停。',
+    noHorse:'没有马',mounted:'骑乘中!',walk:'走路',animalAdult:'成年',notAdult:'幼崽',invalidAction:'无法执行'},
+  ja:{newGame:'ニューゲーム',cont:'つづき',settings:'設定',controls:'操作',back:'戻る',
+    resume:'再開',save:'セーブ',mainMenu:'タイトル',paused:'ポーズ',inventory:'持ち物',
+    map:'マップ',quests:'クエスト',character:'キャラ',shop:'ショップ',close:'閉じる',
+    day:'日',gold:'ゴールド',energy:'体力',hp:'HP',quest:'クエスト',
+    farm:'農場',town:'町',beach:'ビーチ',forest:'森',mountain:'山',mine:'鉱山',
+    spring:'春',summer:'夏',fall:'秋',winter:'冬',
+    sunny:'晴れ',rain:'雨',storm:'嵐',snow:'雪',fog:'霧',
+    buy:'買う',sell:'売る',language:'言語',skin:'肌',hair:'髪',shirt:'シャツ',
+    pants:'ズボン',hat:'帽子',shoes:'靴',customize:'キャラ作成',
+    weapon:'武器',damage:'ダメージ',speed:'速さ',crit:'会心',range:'範囲',
+    noSave:'セーブなし',saved:'セーブ!',notEnoughGold:'ゴールド不足!',notEnoughRes:'資源不足!',
+    helpText:'地面タップで移動。物タップで操作。WASD移動。1-7道具。E扉/睡眠。I持ち物。Mマップ。Qクエスト。H馬。Escポーズ。',
+    noHorse:'馬なし',mounted:'騎乗中!',walk:'歩く',animalAdult:'成体',notAdult:'幼体',invalidAction:'できない'}
+};
+let LANG = localStorage.getItem('pixelfarm_lang') || 'en';
+function t(k){return (I18N[LANG]&&I18N[LANG][k])||I18N.en[k]||k;}
+
+// ============================================================
+// CANVAS
+// ============================================================
+const $ = id => document.getElementById(id);
+const cv = $('cv');
+const ctx = cv.getContext('2d',{alpha:false});
+const TILE = 16;
+let CW = 800, CH = 600, LW = 400, LH = 300, SCALE = 2;
+
+function fitCanvas(){
+  const w = window.innerWidth, h = window.innerHeight;
+  const target = 4/3;
+  let vw, vh;
+  if(w/h > target){ vh = h; vw = h*target; }
+  else { vw = w; vh = w/target; }
+  cv.style.width = vw+'px';
+  cv.style.height = vh+'px';
+}
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', ()=>setTimeout(fitCanvas,80));
+fitCanvas();
+
+// ============================================================
+// SOUND — с менеджером активных узлов, без накопления
+// ============================================================
+const Snd = {
+  ctx: null, master: null, musicGain: null, sfxGain: null,
+  activeNodes: [], musicTimer: null, musicPlaying: false,
+  maxConcurrent: 4, // ограничение одновременных звуков
+  init(){
+    if(this.ctx) return;
+    try{
+      const AC = window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain(); this.master.gain.value = 0.25;
+      this.master.connect(this.ctx.destination);
+      this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.06;
+      this.musicGain.connect(this.master);
+      this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.85;
+      this.sfxGain.connect(this.master);
+    }catch(e){}
+  },
+  resume(){ if(this.ctx && this.ctx.state==='suspended'){try{this.ctx.resume();}catch(e){}} },
+  // регистрация узла с автоочисткой
+  _track(node, stopTime){
+    this.activeNodes.push({node, t:stopTime});
+    // Чистка старых
+    const now = performance.now();
+    this.activeNodes = this.activeNodes.filter(a=>a.t>now-100);
+    // Если слишком много — отсекаем старые
+    if(this.activeNodes.length>this.maxConcurrent){
+      const old = this.activeNodes.shift();
+      try{ old.node.stop&&old.node.stop(); }catch(e){}
+    }
+  },
+  _beep(f1,f2,dur,type,vol){
+    if(!this.ctx) return;
+    // не плодим звуки при кликах
+    if(this.activeNodes.length >= this.maxConcurrent) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = type||'square';
+    osc.frequency.setValueAtTime(f1,now);
+    if(f2) osc.frequency.exponentialRampToValueAtTime(f2,now+dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol||0.15,now);
+    g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+    osc.connect(g).connect(this.sfxGain);
+    osc.start(now); osc.stop(now+dur+0.02);
+    this._track(osc, performance.now()+dur*1000+100);
+  },
+  play(type){
+    if(!this.ctx) return;
+    try{
+      switch(type){
+        case 'step': this._beep(400, 400, 0.04, 'sine', 0.04); break;
+        case 'chop': this._beep(200, 70, 0.12, 'square', 0.18); break;
+        case 'pick': this._beep(1400, 500, 0.06, 'square', 0.12); break;
+        case 'plant': this._beep(500, 800, 0.1, 'sine', 0.09); break;
+        case 'water': this._beep(2000, 1500, 0.08, 'sine', 0.1); break;
+        case 'harvest': this._beep(523, 784, 0.15, 'sine', 0.11); break;
+        case 'fish': this._beep(440, 1046, 0.2, 'triangle', 0.13); break;
+        case 'coin': this._beep(880, 1320, 0.1, 'square', 0.09); break;
+        case 'click': this._beep(900, 900, 0.03, 'square', 0.05); break;
+        case 'error': this._beep(200, 100, 0.14, 'sawtooth', 0.07); break;
+        case 'hurt': this._beep(300, 100, 0.18, 'sawtooth', 0.15); break;
+        case 'hit': this._beep(400, 120, 0.09, 'square', 0.15); break;
+        case 'levelup': this._beep(523, 1318, 0.35, 'triangle', 0.13); break;
+        case 'sleep': this._beep(100, 60, 0.9, 'sine', 0.1); break;
+        case 'door': this._beep(300, 500, 0.12, 'square', 0.09); break;
+        case 'moo': this._beep(180, 120, 0.4, 'sawtooth', 0.11); break;
+        case 'cluck': this._beep(800, 500, 0.09, 'square', 0.06); break;
+        case 'neigh': this._beep(600, 300, 0.3, 'sawtooth', 0.11); break;
+        case 'donate': this._beep(392, 784, 0.5, 'sine', 0.12); break;
+        case 'splash': this._beep(1200, 400, 0.15, 'sine', 0.1); break;
+      }
+    }catch(e){}
+  },
+  startMusic(){
+    if(!this.ctx || this.musicPlaying) return;
+    this.musicPlaying = true;
+    const mel = [392,440,494,587,523,494,440,392,349,392,440,494,440,392,349,330,294,330,349,392];
+    const dur = [0.4,0.4,0.4,0.8,0.4,0.4,0.4,0.8,0.4,0.4,0.4,1.2,0.4,0.4,0.4,0.8,0.4,0.4,0.4,1.2];
+    let i = 0;
+    const step = ()=>{
+      if(!this.musicPlaying || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      try{
+        const o1 = this.ctx.createOscillator();
+        o1.type = 'triangle'; o1.frequency.value = mel[i];
+        const g1 = this.ctx.createGain();
+        g1.gain.setValueAtTime(0,now);
+        g1.gain.linearRampToValueAtTime(0.3,now+0.03);
+        g1.gain.linearRampToValueAtTime(0.07,now+dur[i]*0.5);
+        g1.gain.linearRampToValueAtTime(0,now+dur[i]);
+        o1.connect(g1).connect(this.musicGain);
+        o1.start(now); o1.stop(now+dur[i]);
+        const o2 = this.ctx.createOscillator();
+        o2.type = 'sine'; o2.frequency.value = mel[i]/4;
+        const g2 = this.ctx.createGain();
+        g2.gain.setValueAtTime(0,now);
+        g2.gain.linearRampToValueAtTime(0.1,now+0.04);
+        g2.gain.linearRampToValueAtTime(0,now+dur[i]);
+        o2.connect(g2).connect(this.musicGain);
+        o2.start(now); o2.stop(now+dur[i]);
+      }catch(e){}
+      i = (i+1) % mel.length;
+    };
+    step();
+    this.musicTimer = setInterval(step, 480);
+  },
+  stopMusic(){
+    this.musicPlaying = false;
+    if(this.musicTimer){ clearInterval(this.musicTimer); this.musicTimer = null; }
+  },
+  stopAll(){
+    // Остановить все активные SFX
+    for(const a of this.activeNodes){
+      try{ a.node.stop&&a.node.stop(); }catch(e){}
+    }
+    this.activeNodes = [];
+    this.stopMusic();
+  },
+  pause(){
+    this.stopAll();
+    if(this.ctx && this.master){ try{ this.master.gain.value = 0; }catch(e){} }
+  },
+  unpause(){
+    if(this.ctx && this.master){ try{ this.master.gain.value = 0.25; }catch(e){} }
+    this.startMusic();
+  }
+};
+
+// ============================================================
+// CUSTOMIZATION
+// ============================================================
+const SKIN_TONES = ['#f5cb9b','#e8b888','#d0a070','#a87858','#705030'];
+const HAIR_COLORS = ['#5a3a1a','#3a2510','#8a5a2a','#c8a060','#1a1a1a','#d06050','#a8a8a8','#e8d040'];
+const SHIRT_COLORS = ['#4a80c8','#c84040','#40a848','#d09030','#8040c0','#c0c0c0','#1a1a1a','#e8a040'];
+const PANTS_COLORS = ['#3a3a4a','#4a3030','#2a4a2a','#1a1a2a','#6a4a2a','#a0a0a0'];
+const SHOE_COLORS = ['#2a1a0a','#1a1a1a','#4a2a1a','#3a3a3a'];
+const HATS = [
+  {id:'none',name:'None'},
+  {id:'straw',name:'Straw Hat',color:'#e8c060'},
+  {id:'cap',name:'Cap',color:'#c84040'},
+  {id:'beanie',name:'Beanie',color:'#4080c0'},
+  {id:'wizard',name:'Wizard Hat',color:'#5a3a8a'},
+  {id:'cowboy',name:'Cowboy Hat',color:'#8a5a30'},
+];
+const Custom = {
+  skin: 0, hair: 0, shirt: 0, pants: 0, shoes: 0, hat: 0,
+  load(){
+    try{
+      const s = JSON.parse(localStorage.getItem('pixelfarm_custom')||'{}');
+      Object.assign(this,s);
+    }catch(e){}
+  },
+  save(){
+    try{ localStorage.setItem('pixelfarm_custom', JSON.stringify({skin:this.skin,hair:this.hair,shirt:this.shirt,pants:this.pants,shoes:this.shoes,hat:this.hat})); }catch(e){}
+  }
+};
+Custom.load();
+
+// ============================================================
+// SPRITES
+// ============================================================
+const S = {};
+function spr(n,w,h,fn){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  fn(g,w,h);
+  S[n] = c;
+  return c;
+}
+function rr(g,x,y,w,h,c){ g.fillStyle=c; g.fillRect(x|0,y|0,w|0,h|0); }
+function mirror(a,b){
+  const s = S[a]; if(!s) return;
+  const c = document.createElement('canvas'); c.width = s.width; c.height = s.height;
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.translate(s.width,0); g.scale(-1,1); g.drawImage(s,0,0);
+  S[b] = c;
+}
+
+// --- CHARACTER (uses Custom) ---
+function drawChar(g,dir,frame,state,cust){
+  const skin = SKIN_TONES[cust.skin]||SKIN_TONES[0];
+  const skinD = 'rgba(0,0,0,0.15)';
+  const hair = HAIR_COLORS[cust.hair]||HAIR_COLORS[0];
+  const hairD = 'rgba(0,0,0,0.3)';
+  const shirt = SHIRT_COLORS[cust.shirt]||SHIRT_COLORS[0];
+  const shirtD = 'rgba(0,0,0,0.2)';
+  const pants = PANTS_COLORS[cust.pants]||PANTS_COLORS[0];
+  const shoes = SHOE_COLORS[cust.shoes]||SHOE_COLORS[0];
+  const eye = '#1a1a2a', mouth = '#a05040', blush = '#d06050';
+
+  if(state==='sleep'){
+    rr(g,3,20,26,7,shirt); rr(g,3,20,26,2,shirtD);
+    rr(g,1,22,6,6,skin); rr(g,26,24,5,3,shoes); rr(g,22,20,5,7,pants);
+    if(cust.hat===1){ rr(g,0,21,7,3,'#a88030'); rr(g,2,20,4,3,'#e8c060'); }
+    else if(cust.hat===2){ rr(g,0,21,7,3,'#a03030'); }
+    g.fillStyle='#fff'; g.font='bold 7px monospace'; g.fillText('z',24,16); g.fillText('Z',28,11);
+    return;
+  }
+  const cx = 16;
+  let legL=0, legR=0, bob=0, armL=0, armR=0;
+  if(state==='walk'){
+    const o = [0,1,0,-1];
+    legL = o[frame]; legR = -o[frame];
+    bob = (frame===1||frame===3) ? -1 : 0;
+    armL = o[frame]; armR = -o[frame];
+  }
+  const fY = 31;
+
+  // Legs
+  if(dir==='l'||dir==='r'){
+    rr(g,cx-3+legL,fY-8,4,8,pants); rr(g,cx-1+legR,fY-8,4,8,pants);
+    rr(g,cx-4+legL,fY-2,6,2,shoes); rr(g,cx-1+legR,fY-2,5,2,shoes);
+  } else {
+    rr(g,cx-4,fY-8+legL,3,8,pants); rr(g,cx+1,fY-8+legR,3,8,pants);
+    rr(g,cx-5,fY-2+legL,5,2,shoes); rr(g,cx+1,fY-2+legR,5,2,shoes);
+  }
+  const bT = fY-19+bob;
+  // Body
+  if(dir==='l'||dir==='r'){
+    rr(g,cx-5,bT,10,11,shirt); rr(g,cx-5,bT+9,10,2,shirtD);
+  } else {
+    rr(g,cx-6,bT,12,11,shirt); rr(g,cx-6,bT+9,12,2,shirtD); rr(g,cx-1,bT+2,2,7,shirtD);
+  }
+  // Arms
+  const aY = bT+2;
+  if(dir==='d'){
+    rr(g,cx-8,aY+armL,3,8,shirt); rr(g,cx+5,aY+armR,3,8,shirt);
+    rr(g,cx-8,aY+armL+7,3,2,skin); rr(g,cx+5,aY+armR+7,3,2,skin);
+  } else if(dir==='u'){
+    rr(g,cx-8,aY+armL,3,8,shirt); rr(g,cx+5,aY+armR,3,8,shirt);
+  } else if(dir==='l'){
+    rr(g,cx-7,aY+armL,3,8,shirt); rr(g,cx+2,aY+armR,3,8,shirt);
+    rr(g,cx-7,aY+armL+7,3,2,skin);
+  } else {
+    rr(g,cx+4,aY+armL,3,8,shirt); rr(g,cx-5,aY+armR,3,8,shirt);
+    rr(g,cx+4,aY+armL+7,3,2,skin);
+  }
+  // Head
+  const hT = bT-12;
+  if(dir==='l'){
+    rr(g,cx-5,hT,10,11,skin); rr(g,cx+2,hT,3,11,skinD); rr(g,cx-6,hT+2,3,7,hair);
+    rr(g,cx-3,hT+5,2,2,eye); rr(g,cx-6,hT+8,2,1,blush);
+  } else if(dir==='r'){
+    rr(g,cx-5,hT,10,11,skin); rr(g,cx-5,hT,3,11,skinD); rr(g,cx+3,hT+2,3,7,hair);
+    rr(g,cx+1,hT+5,2,2,eye); rr(g,cx+4,hT+8,2,1,blush);
+  } else if(dir==='d'){
+    rr(g,cx-5,hT,10,11,skin); rr(g,cx-6,hT+2,3,7,hair); rr(g,cx+3,hT+2,3,7,hair);
+    rr(g,cx-3,hT+5,2,2,eye); rr(g,cx+1,hT+5,2,2,eye); rr(g,cx-1,hT+8,2,1,mouth);
+    rr(g,cx-5,hT+8,2,1,blush); rr(g,cx+3,hT+8,2,1,blush);
+  } else {
+    rr(g,cx-5,hT,10,11,skin); rr(g,cx-6,hT+1,12,9,hair); rr(g,cx-6,hT+6,12,4,hairD);
+  }
+  // Hat
+  if(cust.hat===1){
+    rr(g,cx-7,hT-3,14,2,'#a88030'); rr(g,cx-6,hT-6,12,4,'#e8c060'); rr(g,cx-6,hT-3,12,1,'#6a3a1a');
+  } else if(cust.hat===2){
+    rr(g,cx-7,hT-3,14,2,'#a03030'); rr(g,cx-6,hT-6,12,4,'#c84040');
+  } else if(cust.hat===3){
+    rr(g,cx-6,hT-5,12,6,'#4080c0'); rr(g,cx-6,hT-1,12,2,'#305090');
+  } else if(cust.hat===4){
+    rr(g,cx-8,hT-2,16,3,'#3a2050'); rr(g,cx-6,hT-9,12,8,'#5a3a8a'); rr(g,cx-3,hT-11,6,3,'#5a3a8a');
+  } else if(cust.hat===5){
+    rr(g,cx-9,hT-2,18,2,'#6a4a20'); rr(g,cx-7,hT-6,14,4,'#8a5a30'); rr(g,cx-5,hT-8,10,3,'#8a5a30');
+  }
+  if(state==='use'){
+    if(dir==='l'){ rr(g,cx-13,aY,4,4,'#8a5a30'); rr(g,cx-16,aY-3,6,4,'#a0a8b0'); }
+    else if(dir==='r'){ rr(g,cx+9,aY,4,4,'#8a5a30'); rr(g,cx+10,aY-3,6,4,'#a0a8b0'); }
+    else if(dir==='d'){ rr(g,cx+5,aY+4,4,4,'#8a5a30'); rr(g,cx+3,aY+7,8,4,'#a0a8b0'); }
+    else { rr(g,cx-9,aY-8,4,4,'#8a5a30'); rr(g,cx-12,aY-12,6,4,'#a0a8b0'); }
+  }
+}
+
+function regenerateChar(){
+  const DIRS = ['d','u','l','r'];
+  for(const d of DIRS){
+    for(let f=0;f<4;f++) spr('c_'+d+'_'+f,32,32,g=>drawChar(g,d,f,'walk',Custom));
+    spr('c_'+d+'_idle',32,32,g=>drawChar(g,d,0,'idle',Custom));
+    spr('c_'+d+'_use',32,32,g=>drawChar(g,d,0,'use',Custom));
+    spr('c_'+d+'_sleep',32,32,g=>drawChar(g,d,0,'sleep',Custom));
+  }
+  for(let f=0;f<4;f++) mirror('c_r_'+f,'c_l_'+f);
+  mirror('c_r_idle','c_l_idle'); mirror('c_r_use','c_l_use'); mirror('c_r_sleep','c_l_sleep');
+}
+
+// --- NPC template ---
+function drawNPC(g,hair,shirt,pants,hat,dir){
+  const cx=16, skin='#f5cb9b';
+  rr(g,cx-4,23,3,8,pants); rr(g,cx+1,23,3,8,pants);
+  rr(g,cx-5,29,5,2,'#3a2510'); rr(g,cx+1,29,5,2,'#3a2510');
+  rr(g,cx-6,12,12,11,shirt); rr(g,cx-6,21,12,2,'rgba(0,0,0,0.15)');
+  rr(g,cx-8,14,3,8,shirt); rr(g,cx+5,14,3,8,shirt);
+  rr(g,cx-8,21,3,2,skin); rr(g,cx+5,21,3,2,skin);
+  const hT=2;
+  rr(g,cx-5,hT,10,11,skin);
+  if(dir!=='u'){
+    rr(g,cx-3,hT+5,2,2,'#1a1a2a'); rr(g,cx+1,hT+5,2,2,'#1a1a2a');
+    rr(g,cx-1,hT+8,2,1,'#a05040');
+  }
+  rr(g,cx-6,hT+1,3,6,hair); rr(g,cx+3,hT+1,3,6,hair); rr(g,cx-5,hT-1,10,3,hair);
+  if(hat){ rr(g,cx-7,hT-2,14,3,hat); rr(g,cx-5,hT-5,10,3,hat); }
+}
+const NPC_TEMPLATES = [
+  ['#6a3a1a','#d06050','#3a3a4a','#8a5a30'], ['#a86030','#e89090','#4a3a2a','#c8a060'],
+  ['#3a2a1a','#4a80c8','#2a2a3a','#e8c060'], ['#1a1a1a','#8a3030','#3a2010','#3a3a3a'],
+  ['#5a3a1a','#6a5a3a','#3a3a3a','#8a6a3a'], ['#8a4a2a','#4a7a3a','#4a3a2a',null],
+  ['#8a6a3a','#3a5a8a','#4a4a4a','#c8a860'], ['#6a3a5a','#3a4a6a','#2a2a3a',null],
+  ['#1a1a1a','#2a2a3a','#1a1a1a',null], ['#3a3a5a','#8ac04a','#4a4a5a',null],
+];
+
+// --- TOOLS ---
+spr('i_axe',16,16,g=>{ rr(g,6,6,2,8,'#8a5a30'); rr(g,4,2,8,5,'#a8b0b8'); rr(g,4,2,8,1,'#c8d0d8'); });
+spr('i_pick',16,16,g=>{ rr(g,3,7,10,2,'#8a5a30'); rr(g,7,4,2,10,'#8a5a30'); rr(g,2,2,12,3,'#a8b0b8'); });
+spr('i_hoe',16,16,g=>{ rr(g,7,2,2,12,'#8a5a30'); rr(g,4,12,8,3,'#a8b0b8'); });
+spr('i_can',16,16,g=>{ rr(g,4,5,7,8,'#8a98a8'); rr(g,10,6,3,2,'#8a98a8'); rr(g,11,4,3,3,'#a8b4c0'); });
+spr('i_seed',16,16,g=>{ rr(g,3,10,10,4,'#6a4a2a'); rr(g,5,6,2,5,'#5aa03a'); rr(g,9,5,2,6,'#5aa03a'); });
+spr('i_rod',16,16,g=>{ rr(g,4,2,1,12,'#c8a878'); rr(g,5,3,3,1,'#f0f0f0'); rr(g,8,4,1,6,'#f0f0f0'); });
+spr('i_sword',16,16,g=>{ rr(g,7,3,2,9,'#c8d0d8'); rr(g,5,12,6,2,'#8a5a30'); rr(g,7,14,2,2,'#a86a3a'); });
+
+// --- TILES ---
+function tileGrass(g,v,s){
+  let base,dark,light;
+  if(s===0){base='#5a9a3a';dark='#3a7028';light='#78b84a';}
+  else if(s===1){base='#4a8a2a';dark='#2a6018';light='#68a83a';}
+  else if(s===2){base='#9a8a3a';dark='#6a5a2a';light='#b8a84a';}
+  else{base='#d8dce0';dark='#b8bcc0';light='#eef0f4';}
+  rr(g,0,0,16,16,base);
+  if(v===0){ rr(g,3,4,2,1,dark); rr(g,9,6,2,1,dark); rr(g,5,11,3,1,light); }
+  else if(v===1){ for(let i=0;i<7;i++){ const x=(i*5)%14+1,y=(i*7)%14+1; rr(g,x,y,1,2,i%2?dark:light); } }
+  else if(v===2){ rr(g,4,3,1,1,'#ffd54a'); rr(g,11,7,1,1,'#ff8aa8'); }
+  else { rr(g,2,3,3,1,light); rr(g,10,5,2,1,dark); }
+}
+for(let s=0;s<4;s++) for(let v=0;v<4;v++) spr('t_grass_'+s+'_'+v,16,16,g=>tileGrass(g,v,s));
+spr('t_dirt',16,16,g=>{ rr(g,0,0,16,16,'#8a6a3a'); rr(g,0,0,16,1,'#6a4a2a'); rr(g,3,4,2,1,'#6a4a2a'); });
+spr('t_till',16,16,g=>{ rr(g,0,0,16,16,'#6a4a2a'); for(let i=0;i<2;i++){ rr(g,1+i*8,2,5,1,'#4a3020'); rr(g,1+i*8,8,5,1,'#4a3020'); } });
+spr('t_till_wet',16,16,g=>{ rr(g,0,0,16,16,'#3a2015'); for(let i=0;i<2;i++){ rr(g,1+i*8,2,5,1,'#2a1005'); rr(g,1+i*8,8,5,1,'#2a1005'); } });
+spr('t_water',16,16,g=>{ rr(g,0,0,16,16,'#3a6ac0'); rr(g,2,4,3,1,'#5a8ad0'); rr(g,9,7,4,1,'#5a8ad0'); });
+spr('t_deep',16,16,g=>{ rr(g,0,0,16,16,'#1a3a80'); rr(g,2,4,3,1,'#3a6ac0'); });
+spr('t_floor',16,16,g=>{ rr(g,0,0,16,16,'#a07040'); rr(g,5,0,1,8,'#7a4a2a'); rr(g,10,8,1,8,'#7a4a2a'); });
+spr('t_wall',16,16,g=>{ rr(g,0,0,16,16,'#7a5a3a'); rr(g,0,0,16,2,'#5a3a1a'); rr(g,5,2,1,14,'#5a3a1a'); });
+spr('t_sand',16,16,g=>{ rr(g,0,0,16,16,'#e8d0a0'); rr(g,2,3,2,1,'#d0b880'); });
+spr('t_rock',16,16,g=>{ rr(g,0,0,16,16,'#4a4a50'); rr(g,3,3,4,4,'#5a5a60'); rr(g,9,9,5,5,'#5a5a60'); });
+spr('t_cave',16,16,g=>{ rr(g,0,0,16,16,'#5a5550'); rr(g,2,3,3,1,'#4a4540'); });
+spr('t_copper',16,16,g=>{ rr(g,0,0,16,16,'#4a4a50'); rr(g,3,3,3,3,'#c87040'); rr(g,10,5,3,3,'#c87040'); });
+spr('t_iron',16,16,g=>{ rr(g,0,0,16,16,'#4a4a50'); rr(g,3,3,3,3,'#b8b8c0'); rr(g,10,5,3,3,'#b8b8c0'); });
+spr('t_gold',16,16,g=>{ rr(g,0,0,16,16,'#4a4a50'); rr(g,3,3,3,3,'#e8c040'); rr(g,10,5,3,3,'#e8c040'); });
+spr('t_iri',16,16,g=>{ rr(g,0,0,16,16,'#4a4a50'); rr(g,3,3,3,3,'#a070d0'); });
+
+// --- TREES ---
+function drawTree(g,s){
+  let d,m,l;
+  if(s===0||s===1){d='#2a5a1a';m='#3a7a2a';l='#5aa83a';}
+  else if(s===2){d='#7a3a10';m='#a85a20';l='#d89030';}
+  else{d='#a0a8b0';m='#c0c8d0';l='#e0e8f0';}
+  rr(g,14,32,4,16,'#5a3a1a'); rr(g,14,32,2,16,'#3a2a10');
+  rr(g,6,12,20,6,d); rr(g,4,16,24,14,m); rr(g,6,10,20,10,m); rr(g,8,6,16,8,m); rr(g,10,4,12,6,l);
+  rr(g,12,8,8,4,l); rr(g,8,16,6,3,l); rr(g,18,14,6,3,l);
+}
+for(let s=0;s<4;s++) spr('tree_'+s,32,48,g=>drawTree(g,s));
+function drawPine(g,s){
+  let d1,d2,d3;
+  if(s===0||s===1){d1='#2a5a2a';d2='#3a6a2a';d3='#4a8a3a';}
+  else if(s===2){d1='#5a3a10';d2='#6a4a20';d3='#8a6a30';}
+  else{d1='#8a9098';d2='#a0a8b0';d3='#c0c8d0';}
+  rr(g,14,42,4,14,'#5a3a1a');
+  for(let i=0;i<5;i++){ const y=6+i*8,w=12-i*2; rr(g,16-w,y,w*2,6,i%2?d1:d2); rr(g,16-w,y,w*2,1,d3); }
+}
+for(let s=0;s<4;s++) spr('pine_'+s,32,56,g=>drawPine(g,s));
+
+// --- ROCKS ---
+spr('rock_s',16,14,g=>{ rr(g,2,4,12,8,'#8a8a90'); rr(g,2,4,12,2,'#a8a8b0'); rr(g,3,2,10,2,'#b8b8c0'); });
+spr('rock_m',24,20,g=>{ rr(g,2,6,20,12,'#8a8a90'); rr(g,4,3,16,3,'#b8b8c0'); });
+spr('rock_l',32,26,g=>{ rr(g,2,8,28,16,'#8a8a90'); rr(g,4,4,24,5,'#b8b8c0'); });
+
+// --- BUILDINGS ---
+function drawHouse(g,color){
+  rr(g,4,26,72,34,color);
+  for(let i=0;i<8;i++){ const y=14+i*2,x=4-i*0.5; rr(g,x,y,72+i,2,i%2?'#a84838':'#b85848'); }
+  rr(g,0,28,80,3,'#6a3828'); rr(g,28,6,24,10,'#a84838');
+  rr(g,58,4,6,12,'#6a4830'); rr(g,34,40,12,20,'#5a3a1a'); rr(g,36,42,8,18,'#7a5a3a'); rr(g,42,50,2,2,'#e8c060');
+  rr(g,10,34,12,10,'#8a5a3a'); rr(g,11,35,10,8,'#6a9ac8'); rr(g,58,34,12,10,'#8a5a3a'); rr(g,59,35,10,8,'#6a9ac8');
+}
+spr('house',80,64,g=>drawHouse(g,'#d0a878'));
+spr('cabin',80,64,g=>drawHouse(g,'#a87a58'));
+spr('carpenter',80,64,g=>drawHouse(g,'#c89858'));
+spr('shop',64,64,g=>{
+  rr(g,4,24,56,36,'#c8a878');
+  for(let i=0;i<6;i++){ const y=12+i*2,x=4-i*0.5; rr(g,x,y,56+i,2,i%2?'#3a6ab0':'#4a7ac0'); }
+  rr(g,0,26,64,3,'#2a4aa0');
+  for(let i=0;i<8;i++) rr(g,4+i*7,26,3,3,i%2?'#e8e0d0':'#c04040');
+  rr(g,26,42,12,18,'#5a3a1a'); rr(g,28,44,8,16,'#7a5a3a');
+  g.fillStyle='#3a2510'; g.font='bold 7px monospace'; g.fillText('SHOP',22,39);
+});
+spr('blacksmith',64,64,g=>{
+  rr(g,4,24,56,36,'#5a4a3a');
+  for(let i=0;i<6;i++){ const y=12+i*2; rr(g,4-i*0.5,y,56+i,2,i%2?'#3a3a3a':'#4a4a4a'); }
+  rr(g,26,42,12,18,'#3a2a1a'); rr(g,28,44,8,16,'#5a3a1a');
+  g.fillStyle='#ffe8b0'; g.font='bold 7px monospace'; g.fillText('FORGE',22,39);
+});
+spr('tavern',72,64,g=>{
+  rr(g,4,24,64,36,'#a87858');
+  for(let i=0;i<6;i++){ const y=12+i*2; rr(g,4-i*0.5,y,64+i,2,i%2?'#6a3a10':'#8a5a20'); }
+  g.fillStyle='#ffe8b0'; g.font='bold 7px monospace'; g.fillText('TAVERN',24,39);
+});
+spr('townhall',96,72,g=>{
+  rr(g,4,28,88,40,'#e8d0b0');
+  for(let i=0;i<8;i++){ const y=14+i*2; rr(g,4-i*0.5,y,88+i,2,i%2?'#8a3030':'#a85050'); }
+  g.fillStyle='#3a2510'; g.font='bold 6px monospace'; g.fillText('TOWN HALL',30,58);
+});
+spr('community',112,80,g=>{
+  rr(g,8,30,96,46,'#c8b898');
+  for(let i=0;i<8;i++){ const y=18+i*2; rr(g,8-i*0.3,y,96+i,2,i%2?'#4a5a7a':'#5a6a8a'); }
+  rr(g,4,20,10,56,'#b8a888'); rr(g,98,20,10,56,'#b8a888');
+  rr(g,48,50,16,26,'#4a3020'); rr(g,50,52,12,22,'#6a4a30'); rr(g,58,60,2,3,'#e8c060');
+  g.fillStyle='#3a2510'; g.font='bold 5px monospace'; g.fillText('COMMUNITY',40,44);
+});
+
+// --- DECOR ---
+spr('flower_r',8,10,g=>{ rr(g,3,5,2,5,'#4a8a2a'); rr(g,1,2,6,4,'#d04060'); });
+spr('flower_y',8,10,g=>{ rr(g,3,5,2,5,'#4a8a2a'); rr(g,1,2,6,4,'#e8c040'); });
+spr('flower_b',8,10,g=>{ rr(g,3,5,2,5,'#4a8a2a'); rr(g,1,2,6,4,'#8060c0'); });
+spr('flower_w',8,10,g=>{ rr(g,3,5,2,5,'#4a8a2a'); rr(g,1,2,6,4,'#f0f0f0'); });
+spr('mushroom',8,10,g=>{ rr(g,3,6,2,4,'#e8e0d0'); rr(g,1,3,6,4,'#c04040'); });
+spr('bush',16,14,g=>{ rr(g,2,4,12,8,'#3a6a2a'); rr(g,3,3,10,3,'#4a8a3a'); });
+spr('lamp',10,24,g=>{ rr(g,4,8,2,14,'#3a2a1a'); rr(g,2,2,6,5,'#e8c060'); });
+spr('bench',20,10,g=>{ rr(g,1,4,18,3,'#8a5a30'); rr(g,2,9,2,1,'#3a2a1a'); rr(g,16,9,2,1,'#3a2a1a'); });
+spr('barrel',14,16,g=>{ rr(g,1,2,12,14,'#7a4a2a'); rr(g,1,6,12,1,'#a87a4a'); });
+spr('signpost',12,20,g=>{ rr(g,5,8,2,12,'#5a3a1a'); rr(g,1,2,10,7,'#8a5a30'); });
+spr('rock_small',8,6,g=>{ rr(g,1,2,6,3,'#8a8a90'); });
+spr('wood_stump',12,10,g=>{ rr(g,1,3,10,6,'#5a3a1a'); rr(g,1,3,10,1,'#7a5a2a'); });
+spr('fence_h',16,16,g=>{ rr(g,0,6,16,3,'#8a5a30'); rr(g,0,11,16,3,'#8a5a30'); rr(g,2,4,3,14,'#8a5a30'); rr(g,11,4,3,14,'#8a5a30'); });
+spr('fence_v',16,16,g=>{ rr(g,0,6,16,3,'#8a5a30'); rr(g,0,11,16,3,'#8a5a30'); rr(g,6,4,4,14,'#8a5a30'); });
+
+// --- ANIMALS ---
+spr('a_chicken',16,16,g=>{ rr(g,2,6,12,7,'#f8f8f8'); rr(g,0,4,3,4,'#e0e0e0'); rr(g,10,3,5,6,'#f8f8f8'); rr(g,11,1,3,2,'#d02020'); rr(g,13,5,1,1,'#000'); rr(g,5,13,2,3,'#ffb020'); rr(g,9,13,2,3,'#ffb020'); });
+spr('a_chicken_1',16,16,g=>{ rr(g,2,7,12,7,'#f8f8f8'); rr(g,10,4,5,6,'#f8f8f8'); rr(g,11,2,3,2,'#d02020'); rr(g,13,6,1,1,'#000'); rr(g,5,14,2,2,'#ffb020'); rr(g,9,14,2,2,'#ffb020'); });
+spr('a_duck',16,16,g=>{ rr(g,2,6,12,7,'#e8e8e0'); rr(g,10,2,5,6,'#e8e8e0'); rr(g,11,0,3,3,'#a0d040'); rr(g,13,4,1,1,'#000'); rr(g,5,13,2,3,'#ff9020'); rr(g,9,13,2,3,'#ff9020'); });
+spr('a_duck_1',16,16,g=>{ rr(g,2,7,12,7,'#e8e8e0'); rr(g,10,3,5,6,'#e8e8e0'); rr(g,11,1,3,3,'#a0d040'); rr(g,13,5,1,1,'#000'); });
+spr('a_rabbit',14,14,g=>{ rr(g,2,6,10,7,'#f0f0f0'); rr(g,9,2,5,6,'#f0f0f0'); rr(g,10,0,2,3,'#ffe8e8'); rr(g,12,0,2,3,'#ffe8e8'); rr(g,11,4,1,1,'#000'); });
+spr('a_rabbit_1',14,14,g=>{ rr(g,2,7,10,6,'#f0f0f0'); rr(g,9,3,5,6,'#f0f0f0'); rr(g,10,1,2,3,'#ffe8e8'); rr(g,12,1,2,3,'#ffe8e8'); });
+spr('a_cow',24,22,g=>{ rr(g,2,6,18,12,'#ffffff'); rr(g,3,7,4,3,'#1a1a1a'); rr(g,12,10,5,4,'#1a1a1a'); rr(g,3,17,3,4,'#fff'); rr(g,7,17,3,4,'#fff'); rr(g,14,17,3,4,'#fff'); rr(g,18,17,3,4,'#fff'); rr(g,19,3,5,9,'#fff'); rr(g,19,10,5,4,'#f0a0a0'); rr(g,21,5,1,1,'#000'); });
+spr('a_cow_1',24,22,g=>{ rr(g,2,7,18,12,'#fff'); rr(g,3,8,4,3,'#1a1a1a'); rr(g,3,18,3,3,'#fff'); rr(g,19,4,5,9,'#fff'); rr(g,19,11,5,4,'#f0a0a0'); });
+spr('a_goat',20,20,g=>{ rr(g,2,6,14,10,'#f8f8f0'); rr(g,15,3,4,8,'#f8f8f0'); rr(g,16,8,3,3,'#e8d0b0'); rr(g,17,4,1,1,'#000'); rr(g,15,1,1,3,'#3a3a2a'); rr(g,18,1,1,3,'#3a3a2a'); rr(g,4,16,2,3,'#3a3a2a'); });
+spr('a_goat_1',20,20,g=>{ rr(g,2,7,14,9,'#f8f8f0'); rr(g,15,4,4,8,'#f8f8f0'); rr(g,4,16,2,3,'#3a3a2a'); });
+spr('a_pig',24,16,g=>{ rr(g,2,4,18,9,'#f0a0b0'); rr(g,3,5,4,2,'#e08090'); rr(g,3,12,3,3,'#e0a0b0'); rr(g,7,12,3,3,'#e0a0b0'); rr(g,14,12,3,3,'#e0a0b0'); rr(g,18,12,3,3,'#e0a0b0'); rr(g,19,2,5,8,'#f0a0b0'); rr(g,22,6,3,3,'#e08090'); rr(g,21,3,1,1,'#000'); });
+spr('a_pig_1',24,16,g=>{ rr(g,2,5,18,9,'#f0a0b0'); rr(g,19,3,5,8,'#f0a0b0'); rr(g,22,7,3,3,'#e08090'); });
+spr('a_piglet',12,10,g=>{ rr(g,1,2,8,6,'#f0a0b0'); rr(g,8,1,3,5,'#f0a0b0'); rr(g,10,3,2,2,'#e08090'); rr(g,9,2,1,1,'#000'); });
+spr('a_calf',16,16,g=>{ rr(g,2,4,12,8,'#fff'); rr(g,3,5,3,2,'#1a1a1a'); rr(g,12,2,4,7,'#fff'); rr(g,13,7,3,3,'#f0a0a0'); });
+spr('a_chick',12,12,g=>{ rr(g,2,5,8,5,'#fdfaa0'); rr(g,8,3,4,4,'#fdfaa0'); rr(g,9,2,2,1,'#d04040'); rr(g,11,5,1,1,'#000'); rr(g,4,10,1,2,'#ff9020'); rr(g,7,10,1,2,'#ff9020'); });
+spr('a_duckling',12,12,g=>{ rr(g,2,5,8,5,'#f0f0e0'); rr(g,8,2,4,5,'#f0f0e0'); rr(g,9,1,2,1,'#c8d040'); rr(g,11,5,1,1,'#000'); rr(g,4,10,1,2,'#ff9020'); rr(g,7,10,1,2,'#ff9020'); });
+
+// --- HORSE ---
+function drawHorse(g,walkPhase){
+  const legO = [0,1,0,-1][walkPhase%4];
+  rr(g,4,14,24,10,'#8a4a20'); rr(g,4,14,24,2,'#a86a3a');
+  rr(g,20,4,10,14,'#8a4a20'); rr(g,21,5,8,3,'#a86a3a');
+  rr(g,22,2,3,4,'#8a4a20'); rr(g,26,2,3,4,'#8a4a20');
+  rr(g,22,8,1,1,'#000'); rr(g,28,12,4,3,'#5a2a10');
+  rr(g,19,4,2,12,'#3a1a10');
+  rr(g,6,22+legO,3,8,'#8a4a20'); rr(g,10,22-legO,3,8,'#6a3a10');
+  rr(g,20,22+legO,3,8,'#8a4a20'); rr(g,24,22-legO,3,8,'#6a3a10');
+  rr(g,6,29+legO,4,2,'#1a0a05'); rr(g,10,29-legO,4,2,'#1a0a05');
+  rr(g,20,29+legO,4,2,'#1a0a05'); rr(g,24,29-legO,4,2,'#1a0a05');
+  rr(g,2,12,3,8,'#3a1a10');
+}
+spr('h_r_0',36,32,g=>drawHorse(g,0));
+spr('h_r_1',36,32,g=>drawHorse(g,1));
+spr('h_l_0',36,32,g=>{ g.translate(36,0); g.scale(-1,1); drawHorse(g,0); });
+spr('h_l_1',36,32,g=>{ g.translate(36,0); g.scale(-1,1); drawHorse(g,1); });
+
+// --- CROPS ---
+const CROPS = ['wheat','carrot','tomato','potato','corn','pumpkin'];
+function drawCrop(g,type,stage){
+  const cx=8;
+  if(stage===0){ rr(g,cx-1,14,2,2,'#5a3a1a'); rr(g,cx,13,1,1,'#4a8a2a'); return; }
+  if(stage===1){ rr(g,cx-1,12,2,4,'#4a8a2a'); rr(g,cx-3,10,2,2,'#5aa04a'); return; }
+  if(stage===2){ rr(g,cx-1,10,2,6,'#4a8a2a'); rr(g,cx-3,7,2,3,'#5aa04a'); rr(g,cx+1,7,2,3,'#5aa04a'); return; }
+  if(stage===3){ rr(g,cx-1,6,2,10,'#4a8a2a'); rr(g,cx-4,4,3,3,'#5aa04a'); rr(g,cx+1,4,3,3,'#5aa04a'); return; }
+  if(type==='wheat'){ rr(g,cx-1,2,2,14,'#c8a840'); rr(g,cx-3,4,2,3,'#e0c050'); rr(g,cx+1,4,2,3,'#e0c050'); }
+  else if(type==='carrot'){ rr(g,cx-3,10,3,6,'#e07020'); rr(g,cx,10,3,6,'#e07020'); }
+  else if(type==='tomato'){ rr(g,cx-4,9,4,5,'#d03030'); rr(g,cx,9,4,5,'#d03030'); }
+  else if(type==='potato'){ rr(g,cx-4,10,4,5,'#a87848'); rr(g,cx,10,4,5,'#a87848'); }
+  else if(type==='corn'){ rr(g,cx-1,2,2,14,'#4a8a2a'); rr(g,cx-4,4,3,6,'#c8a840'); rr(g,cx+1,4,3,6,'#c8a840'); }
+  else { rr(g,cx-5,9,10,7,'#e08020'); rr(g,cx-2,9,1,7,'#c06818'); }
+}
+for(const t of CROPS) for(let s=0;s<5;s++) spr('crop_'+t+'_'+s,16,16,g=>drawCrop(g,t,s));
+
+// --- MONSTERS ---
+spr('m_slime',16,16,g=>{ rr(g,3,6,10,8,'#3a8a3a'); rr(g,3,6,10,2,'#5aaa5a'); rr(g,5,8,2,2,'#1a1a1a'); rr(g,9,8,2,2,'#1a1a1a'); });
+spr('m_bat',16,12,g=>{ rr(g,1,4,6,4,'#3a2a3a'); rr(g,9,4,6,4,'#3a2a3a'); rr(g,4,3,8,6,'#5a3a5a'); rr(g,5,5,2,2,'#ff3030'); rr(g,9,5,2,2,'#ff3030'); });
+spr('m_skeleton',16,20,g=>{ rr(g,5,2,6,6,'#f0f0e8'); rr(g,6,4,2,2,'#1a1a1a'); rr(g,9,4,2,2,'#1a1a1a'); rr(g,6,9,4,8,'#f0f0e8'); });
+spr('m_golem',22,24,g=>{ rr(g,2,6,18,14,'#7a7a80'); rr(g,2,6,18,3,'#9a9aa0'); rr(g,6,8,2,3,'#c04040'); rr(g,13,8,2,3,'#c04040'); });
+spr('m_ghost',16,18,g=>{ g.globalAlpha=0.7; rr(g,3,2,10,12,'#e0e0f0'); rr(g,5,5,2,2,'#6060c0'); rr(g,9,5,2,2,'#6060c0'); g.globalAlpha=1; });
+
+// --- MISC ---
+spr('shadow',20,8,g=>{ for(let x=0;x<20;x++) for(let y=0;y<8;y++){ const dx=(x-10)/10,dy=(y-4)/4; const d=dx*dx+dy*dy; if(d<1){ g.fillStyle='rgba(0,0,0,'+(0.35*(1-d))+')'; g.fillRect(x,y,1,1); } } });
+spr('bobber',6,6,g=>{ rr(g,1,2,4,2,'#d04040'); rr(g,1,4,4,1,'#fff'); });
+spr('ladder',16,16,g=>{ rr(g,2,0,2,16,'#8a5a30'); rr(g,12,0,2,16,'#8a5a30'); for(let i=0;i<4;i++) rr(g,2,2+i*4,12,1,'#a87a4a'); });
+
+// Сначала генерируем персонажа
+regenerateChar();
+
+// ============================================================
+// WORLD
+// ============================================================
+const T_GRASS=0,T_PATH=1,T_WATER=2,T_TILL=3,T_TILL_WET=4,T_FLOOR=5,T_WALL=6,T_SAND=7,T_DEEP=8,
+      T_ROCK=9,T_CAVE=10,T_CU=11,T_IR=12,T_GO=13,T_IRID=14;
+const BLOCKING = new Set([T_WATER,T_WALL,T_DEEP,T_ROCK,T_CU,T_IR,T_GO,T_IRID]);
+
+function makeMap(w,h,fill){ const m=[]; for(let y=0;y<h;y++){ const r=[]; for(let x=0;x<w;x++) r.push(fill); m.push(r); } return m; }
+function makeFarm(){
+  const m = makeMap(50,40,T_GRASS);
+  for(let y=26;y<34;y++) for(let x=32;x<44;x++){ const dx=x-38,dy=y-30; if(dx*dx/1.3+dy*dy<20) m[y][x]=T_WATER; }
+  for(let x=20;x<32;x++) m[18][x]=T_PATH;
+  for(let y=10;y<18;y++) m[y][26]=T_PATH;
+  for(let x=13;x<27;x++) m[10][x]=T_PATH;
+  for(let x=22;x<28;x++) m[0][x]=T_PATH;
+  for(let x=22;x<28;x++) m[39][x]=T_PATH;
+  for(let y=18;y<24;y++) m[y][0]=T_PATH;
+  for(let y=18;y<24;y++) m[y][49]=T_PATH;
+  return m;
+}
+function makeTown(){
+  const m = makeMap(50,40,T_GRASS);
+  for(let x=0;x<50;x++) m[20][x]=T_PATH;
+  for(let y=0;y<40;y++) m[y][25]=T_PATH;
+  for(let y=18;y<24;y++) for(let x=22;x<30;x++) m[y][x]=T_FLOOR;
+  for(let x=22;x<28;x++) m[39][x]=T_PATH;
+  for(let x=22;x<28;x++) m[0][x]=T_PATH;
+  return m;
+}
+function makeBeach(){
+  const m = makeMap(50,40,T_SAND);
+  for(let x=0;x<50;x++) m[0][x]=T_PATH;
+  for(let y=20;y<40;y++) for(let x=0;x<50;x++) m[y][x]=T_WATER;
+  for(let y=30;y<40;y++) for(let x=0;x<50;x++) m[y][x]=T_DEEP;
+  return m;
+}
+function makeForest(){
+  const m = makeMap(40,40,T_GRASS);
+  for(let y=18;y<24;y++) m[y][0]=T_PATH;
+  for(let y=18;y<24;y++) m[y][39]=T_PATH;
+  for(let x=18;x<24;x++) m[0][x]=T_PATH;
+  return m;
+}
+function makeMountain(){
+  const m = makeMap(40,40,T_GRASS);
+  for(let y=0;y<40;y++) for(let x=0;x<40;x++) if(Math.random()<0.15) m[y][x]=T_ROCK;
+  for(let y=36;y<40;y++) for(let x=18;x<24;x++) m[y][x]=T_GRASS;
+  for(let y=10;y<15;y++) for(let x=15;x<25;x++) m[y][x]=T_WATER;
+  return m;
+}
+
+const World = {
+  farm:{ w:50,h:40,tiles:makeFarm(),objects:[],animals:[],
+    houseArea:{x:20,y:13,w:5,h:4}, houseDoor:{x:22,y:16},
+    shopPos:{x:14,y:7}, shopDoor:{x:16,y:10},
+    penArea:{x:26,y:20,w:12,h:9},
+    stablePos:{x:6,y:20}, stableDoor:{x:9,y:24},
+    carpenterPos:{x:36,y:8}, carpenterDoor:{x:39,y:12},
+    communityPos:{x:6,y:8}, communityDoor:{x:10,y:13}},
+  town:{ w:50,h:40,tiles:makeTown(),objects:[],buildings:[
+    {type:'townhall',x:18,y:6,w:6,h:5},
+    {type:'blacksmith',x:32,y:12,w:4,h:4,door:{x:34,y:15}},
+    {type:'shop',x:6,y:12,w:4,h:4,door:{x:8,y:15}},
+    {type:'tavern',x:32,y:28,w:5,h:4,door:{x:34,y:31}},
+    {type:'cabin',x:40,y:6,w:5,h:4,door:{x:42,y:9}},
+    {type:'cabin',x:10,y:28,w:5,h:4,door:{x:12,y:31}},
+    {type:'carpenter',x:44,y:32,w:5,h:4,door:{x:46,y:35}}
+  ]},
+  beach:{ w:50,h:40,tiles:makeBeach(),objects:[] },
+  forest:{ w:40,h:40,tiles:makeForest(),objects:[] },
+  mountain:{ w:40,h:40,tiles:makeMountain(),objects:[] },
+  mine:{ w:30,h:30,tiles:[],objects:[],depth:1 }
+};
+
+// ============================================================
+// NPC DATA (with English names)
+// ============================================================
+const NPC_DATA = [
+  {id:'pierre',name:'Pierre',role:'Seeds',shop:'seeds',quest:{item:'wheat',count:5,reward:150},loc:'town',hx:8,hy:10,fav:'tomato'},
+  {id:'marnie',name:'Marnie',role:'Animals',shop:'animals',quest:{item:'egg',count:3,reward:200},loc:'town',hx:11,hy:14,fav:'wheat'},
+  {id:'willy',name:'Willy',role:'Fish',shop:'fish',quest:{item:'fish',count:3,reward:180},loc:'beach',hx:12,hy:15,fav:'fish'},
+  {id:'gunnar',name:'Gunnar',role:'Weapons',shop:'weapons',quest:{item:'copper',count:10,reward:250},loc:'town',hx:32,hy:18,fav:'iron'},
+  {id:'clint',name:'Clint',role:'Ore',shop:'ores',quest:{item:'stone',count:20,reward:200},loc:'town',hx:36,hy:14,fav:'gold_ore'},
+  {id:'robin',name:'Robin',role:'Build',shop:'build',quest:{item:'wood',count:20,reward:220},loc:'town',hx:15,hy:20,fav:'wood'},
+  {id:'lewis',name:'Lewis',role:'Mayor',shop:null,quest:{item:'pumpkin',count:2,reward:300},loc:'town',hx:23,hy:12,fav:'pumpkin'},
+  {id:'abigail',name:'Abigail',role:'Adventurer',shop:null,quest:{item:'slime',count:5,reward:150},loc:'town',hx:30,hy:22,fav:'gold_ore'},
+  {id:'sebastian',name:'Sebastian',role:'Wizard',shop:null,quest:{item:'coal',count:10,reward:250},loc:'town',hx:18,hy:25,fav:'iri'},
+  {id:'maru',name:'Maru',role:'Scientist',shop:null,quest:{item:'iron',count:5,reward:200},loc:'town',hx:26,hy:8,fav:'iri'},
+  {id:'haley',name:'Haley',role:'Photo',shop:null,quest:{item:'fish',count:2,reward:180},loc:'beach',hx:20,hy:10,fav:'tomato'},
+  {id:'elliot',name:'Elliot',role:'Writer',shop:null,quest:{item:'fish',count:5,reward:300},loc:'beach',hx:30,hy:12,fav:'fish'},
+  {id:'leah',name:'Leah',role:'Artist',shop:null,quest:{item:'wood',count:30,reward:250},loc:'forest',hx:20,hy:20,fav:'carrot'},
+  {id:'harvey',name:'Harvey',role:'Doctor',shop:'heal',quest:{item:'potato',count:5,reward:200},loc:'town',hx:38,hy:8,fav:'potato'},
+  {id:'demetrius',name:'Demetrius',role:'Biologist',shop:null,quest:{item:'copper',count:15,reward:300},loc:'mountain',hx:20,hy:25,fav:'iri'},
+  {id:'jodi',name:'Jodi',role:'Cook',shop:'food',quest:{item:'corn',count:5,reward:180},loc:'town',hx:40,hy:26,fav:'corn'},
+  {id:'kent',name:'Kent',role:'Veteran',shop:null,quest:{item:'slime',count:10,reward:300},loc:'town',hx:12,hy:26,fav:'stone'},
+  {id:'pam',name:'Pam',role:'Bartender',shop:'drinks',quest:{item:'gold_ore',count:3,reward:400},loc:'town',hx:34,hy:28,fav:'gold_ore'},
+  {id:'shane',name:'Shane',role:'Farmer',shop:'seeds',quest:{item:'egg',count:5,reward:200},loc:'farm',hx:30,hy:22,fav:'egg'},
+  {id:'sandy',name:'Sandy',role:'Trader',shop:'exotic',quest:{item:'iri',count:2,reward:500},loc:'mountain',hx:25,hy:8,fav:'iri'},
+];
+for(const n of NPC_DATA){
+  n.hearts = 0; n.questDone = false; n.questGiven = false;
+  n.x = n.hx*TILE+8; n.y = n.hy*TILE+16;
+  n.dir = 'd'; n.walkPhase = 0; n.walkTimer = 0;
+  n.moveTimer = 2000+Math.random()*3000;
+  n.wanderTarget = {x:n.x, y:n.y};
+}
+
+// NPC sprites
+for(let i=0;i<20;i++){
+  const [h,s,p,ht] = NPC_TEMPLATES[i % NPC_TEMPLATES.length];
+  for(const d of ['d','l','u','r']) spr('npc'+i+'_'+d,32,32,g=>drawNPC(g,h,s,p,ht,d));
+}
+
+// ============================================================
+// ANIMAL TYPES
+// ============================================================
+const ANIMAL_TYPES = {
+  chicken:{ name:'Chicken', price:80, product:'egg', time:60000, icon:'🥚', baby:'a_chick' },
+  duck:{ name:'Duck', price:150, product:'feather', time:90000, icon:'🪶', baby:'a_duckling' },
+  rabbit:{ name:'Rabbit', price:300, product:'wool', time:150000, icon:'🧶', baby:'a_rabbit' },
+  pig:{ name:'Pig', price:250, product:'truffle', time:120000, icon:'🍄', baby:'a_piglet' },
+  cow:{ name:'Cow', price:400, product:'milk', time:120000, icon:'🥛', baby:'a_calf' },
+  goat:{ name:'Goat', price:500, product:'goat_milk', time:180000, icon:'🥛', baby:'a_goat' },
+  horse:{ name:'Horse', price:1500, product:null, time:0, icon:'🐴', baby:'h_r_0' }
+};
+
+// ============================================================
+// FISH (40 species)
+// ============================================================
+const FISH_LIST = [
+  {name:'Herring',loc:'beach',time:'any',weather:'any',price:20,chance:0.9},
+  {name:'Anchovy',loc:'beach',time:'any',weather:'any',price:22,chance:0.85},
+  {name:'Sardine',loc:'beach',time:'day',weather:'any',price:25,chance:0.8},
+  {name:'Flounder',loc:'beach',time:'day',weather:'any',price:30,chance:0.7},
+  {name:'Tilapia',loc:'beach',time:'day',weather:'any',price:35,chance:0.65},
+  {name:'Mackerel',loc:'beach',time:'day',weather:'any',price:40,chance:0.7},
+  {name:'Snapper',loc:'beach',time:'day',weather:'any',price:45,chance:0.55},
+  {name:'Salmon',loc:'beach',time:'day',weather:'any',price:75,chance:0.5},
+  {name:'Tuna',loc:'beach',time:'day',weather:'any',price:100,chance:0.4},
+  {name:'Octopus',loc:'beach',time:'night',weather:'any',price:90,chance:0.4},
+  {name:'Squid',loc:'beach',time:'night',weather:'any',price:70,chance:0.6},
+  {name:'Eel',loc:'beach',time:'night',weather:'rain',price:120,chance:0.5},
+  {name:'Carp',loc:'farm',time:'any',weather:'any',price:25,chance:0.8},
+  {name:'Perch',loc:'farm',time:'day',weather:'any',price:30,chance:0.7},
+  {name:'Bream',loc:'farm',time:'night',weather:'any',price:40,chance:0.6},
+  {name:'Chub',loc:'farm',time:'any',weather:'any',price:35,chance:0.75},
+  {name:'Bass',loc:'farm',time:'day',weather:'any',price:55,chance:0.5},
+  {name:'Trout',loc:'farm',time:'day',weather:'any',price:65,chance:0.5},
+  {name:'Pike',loc:'farm',time:'day',weather:'rain',price:90,chance:0.4},
+  {name:'Sturgeon',loc:'farm',time:'day',weather:'any',price:180,chance:0.2},
+  {name:'Lingcod',loc:'deep',time:'any',weather:'any',price:120,chance:0.4},
+  {name:'Halibut',loc:'deep',time:'any',weather:'any',price:150,chance:0.35},
+  {name:'Swordfish',loc:'deep',time:'any',weather:'any',price:200,chance:0.2},
+  {name:'Shark',loc:'deep',time:'night',weather:'any',price:400,chance:0.1},
+  {name:'Anglerfish',loc:'deep',time:'night',weather:'any',price:350,chance:0.15},
+  {name:'Manta Ray',loc:'deep',time:'day',weather:'any',price:280,chance:0.15},
+  {name:'Clam',loc:'beach',time:'any',weather:'any',price:10,chance:0.95},
+  {name:'Oyster',loc:'beach',time:'any',weather:'any',price:18,chance:0.85},
+  {name:'Lobster',loc:'deep',time:'night',weather:'any',price:180,chance:0.25},
+  {name:'Crab',loc:'beach',time:'night',weather:'any',price:60,chance:0.5},
+  {name:'Shrimp',loc:'beach',time:'any',weather:'any',price:30,chance:0.7},
+  {name:'Sunfish',loc:'farm',time:'day',weather:'sunny',price:45,chance:0.5},
+  {name:'Catfish',loc:'farm',time:'any',weather:'rain',price:80,chance:0.6},
+  {name:'Golden Carp',loc:'farm',time:'day',weather:'sunny',price:250,chance:0.05},
+  {name:'Legend Sturgeon',loc:'deep',time:'night',weather:'storm',price:2000,chance:0.02},
+  {name:'Coelacanth',loc:'deep',time:'night',weather:'rain',price:3000,chance:0.01},
+  {name:'Crimsonfish',loc:'beach',time:'day',weather:'sunny',price:1500,chance:0.03},
+  {name:'Glacierfish',loc:'mountain',time:'night',weather:'snow',price:1800,chance:0.02},
+  {name:'Legend',loc:'mountain',time:'any',weather:'rain',price:5000,chance:0.005},
+  {name:'Mutant Carp',loc:'deep',time:'any',weather:'any',price:1000,chance:0.02},
+];
+
+// ============================================================
+// COMMUNITY BUNDLES
+// ============================================================
+const BUNDLES = [
+  {id:'spring',name:'Spring Crops',items:{wheat:5,carrot:3,tomato:3},reward:500,done:false},
+  {id:'summer',name:'Summer Crops',items:{corn:5,pumpkin:2},reward:800,done:false},
+  {id:'miner',name:"Miner's Bundle",items:{copper:10,iron:5},reward:1200,done:false},
+  {id:'fisher',name:"Fisher's Bundle",items:{fish:10},reward:1000,done:false},
+  {id:'rancher',name:"Rancher's Bundle",items:{egg:5,milk:3,wool:2},reward:900,done:false},
+];
+
+// ============================================================
+// WEAPONS with stats
+// ============================================================
+const WEAPONS = [
+  {name:'Rusty Sword',dmg:8,speed:1.0,crit:0.03,range:1.2,price:0,icon:'i_sword'},
+  {name:'Copper Sword',dmg:15,speed:1.0,crit:0.05,range:1.3,price:200,icon:'i_sword'},
+  {name:'Iron Sword',dmg:25,speed:1.0,crit:0.08,range:1.3,price:500,icon:'i_sword'},
+  {name:'Steel Blade',dmg:35,speed:1.1,crit:0.10,range:1.4,price:900,icon:'i_sword'},
+  {name:'Gold Sword',dmg:45,speed:1.0,crit:0.12,range:1.4,price:1400,icon:'i_sword'},
+  {name:'Obsidian Edge',dmg:60,speed:1.2,crit:0.15,range:1.5,price:2200,icon:'i_sword'},
+  {name:'Iridium Sword',dmg:80,speed:1.0,crit:0.18,range:1.5,price:3500,icon:'i_sword'},
+  {name:'Galaxy Blade',dmg:120,speed:1.3,crit:0.25,range:1.6,price:6000,icon:'i_sword'},
+];
+const ARMORS = [
+  {name:'None',hp:0,price:0},
+  {name:'Leather',hp:15,price:150},
+  {name:'Iron',hp:30,price:400},
+  {name:'Steel',hp:45,price:800},
+  {name:'Gold',hp:60,price:1500},
+  {name:'Obsidian',hp:80,price:2500},
+  {name:'Iridium',hp:110,price:4000},
+];
+
+// ============================================================
+// MONSTER TYPES
+// ============================================================
+const MONSTER_TYPES = [
+  {id:'slime',sprite:'m_slime',hp:10,dmg:3,drop:['slime',0.5],yield:2,name:'Slime'},
+  {id:'bat',sprite:'m_bat',hp:15,dmg:5,drop:['coal',0.3],yield:1,name:'Bat'},
+  {id:'skeleton',sprite:'m_skeleton',hp:30,dmg:10,drop:['bone',0.6],yield:1,name:'Skeleton'},
+  {id:'golem',sprite:'m_golem',hp:60,dmg:15,drop:['iron',0.8],yield:2,name:'Golem'},
+  {id:'ghost',sprite:'m_ghost',hp:45,dmg:20,drop:['iri',0.3],yield:1,name:'Ghost'},
+];
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const SEASONS = ['spring','summer','fall','winter'];
+const Game = {
+  time:6*60, day:1, season:0, seasonDay:1, weather:'sunny',
+  energy:100, maxEnergy:100, hp:100, maxHp:100, gold:80,
+  inv:{ wood:0, stone:0, seeds:10, fish:0, food:3,
+    wheat:0, carrot:0, tomato:0, potato:0, corn:0, pumpkin:0,
+    egg:0, milk:0, goat_milk:0, wool:0, truffle:0, feather:0,
+    copper:0, iron:0, gold_ore:0, iri:0, coal:0, slime:0, bone:0, potion:0 },
+  fishCaught:{},
+  hotbar:['axe','pick','hoe','can','seed','rod','sword'],
+  selected:0,
+  map:'farm',
+  sleeping:false, paused:false, dayNight:0,
+  fishing:null, toast:'', toastTimer:0,
+  particles:[], shopOpen:false, shopOwner:null,
+  panelOpen:null,
+  weaponLevel:0, armorLevel:0,
+  kills:{},
+  monsters:[],
+  activeQuests:[], completedQuests:0,
+  onHorse:false, stuckTimer:0, invuln:0,
+  bundles:BUNDLES.map(b=>({...b})),
+};
+
+const player = {
+  x:24*TILE+8, y:19*TILE, speed:1.4, dir:'d',
+  walkPhase:0, walkTimer:0,
+  action:null, actionTimer:0,
+  targetX:null, targetY:null, actionTarget:null,
+};
+const camera = { x:0, y:0 };
+const keys = {};
+
+function currentMap(){ return World[Game.map]; }
+function toolName(t){ return {axe:'Axe',pick:'Pickaxe',hoe:'Hoe',can:'Can',seed:'Seeds',rod:'Rod',sword:'Sword'}[t]; }
+function tileAt(tx,ty){
+  const m = currentMap();
+  if(!m.tiles || !m.tiles[ty]) return T_ROCK;
+  if(ty<0||ty>=m.tiles.length||tx<0||tx>=m.tiles[0].length) return T_ROCK;
+  return m.tiles[ty][tx];
+}
+function findObjectAt(tx,ty){
+  const m = currentMap();
+  if(!m.objects) return null;
+  for(const o of m.objects) if(tx===o.tx && ty===o.ty) return o;
+  return null;
+}
+function findNPCAt(tx,ty){
+  const wp = {x:tx*TILE+TILE/2, y:ty*TILE+TILE/2};
+  for(const n of NPC_DATA){
+    if(n.loc!==Game.map) continue;
+    if(Math.abs(n.x-wp.x)<20 && Math.abs(n.y-wp.y)<22) return n;
+  }
+  return null;
+}
+function findMonsterAt(tx,ty){
+  const wp = {x:tx*TILE+TILE/2, y:ty*TILE+TILE/2};
+  for(const m of Game.monsters) if(Math.abs(m.x-wp.x)<16 && Math.abs(m.y-wp.y)<16) return m;
+  return null;
+}
+function toast(txt){
+  Game.toast = txt; Game.toastTimer = 1500;
+  const e = $('notify'); e.textContent = txt; e.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>e.classList.remove('show'), 1500);
+}
+function fadeTo(cb){
+  $('fade').classList.add('active');
+  setTimeout(()=>{ cb(); setTimeout(()=>$('fade').classList.remove('active'),80); }, 350);
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function startAction(t){ player.action = t; player.actionTimer = 400; }
+function removeObject(o){ const m = currentMap(); if(!m.objects) return; const i = m.objects.indexOf(o); if(i>=0) m.objects.splice(i,1); }
+function spawnParticle(x,y,c){ for(let i=0;i<5;i++) Game.particles.push({x:x+(Math.random()-.5)*8, y:y+(Math.random()-.5)*4, vx:(Math.random()-.5)*2, vy:-Math.random()*1.5, life:600, max:600, color:c}); }
+function consumeEnergy(n){ Game.energy = Math.max(0, Game.energy-n); }
+
+function attack(tx,ty){
+  const weapon = WEAPONS[Game.weaponLevel];
+  const mon = findMonsterAt(tx,ty);
+  if(!mon) return false;
+  startAction('use');
+  Snd.play('hit');
+  const isCrit = Math.random() < weapon.crit;
+  const dmg = Math.floor(weapon.dmg * (isCrit?2:1));
+  mon.hp -= dmg;
+  mon.hitTimer = 200;
+  spawnParticle(mon.x, mon.y-8, isCrit?'#ffff40':'#ff4040');
+  if(mon.hp<=0){
+    const t = MONSTER_TYPES.find(x=>x.id===mon.typeId);
+    if(t){ if(Math.random()<t.drop[1]) Game.inv[t.drop[0]] = (Game.inv[t.drop[0]]||0)+t.yield; }
+    Game.kills[mon.typeId] = (Game.kills[mon.typeId]||0)+1;
+    Game.gold += 2+Math.floor(Math.random()*5);
+    const idx = Game.monsters.indexOf(mon);
+    if(idx>=0) Game.monsters.splice(idx,1);
+    toast('Killed '+mon.name);
+  }
+  consumeEnergy(1);
+  return true;
+}
+
+function doActionAt(tx,ty){
+  if(player.action || Game.sleeping) return;
+
+  // Farm doors
+  if(Game.map==='farm'){
+    const hd = World.farm.houseDoor;
+    if(tx===hd.x && ty===hd.y){ startSleep(); return; }
+    const sd = World.farm.shopDoor;
+    if(tx===sd.x && ty===sd.y){ openShop({name:'Farm Shop',role:'Goods',shop:'seeds'}); return; }
+    const stD = World.farm.stableDoor;
+    if(tx===stD.x && ty===stD.y){ if(!Game.onHorse) openShop({name:'Stable',role:'Horses',shop:'horses'}); return; }
+    const cD = World.farm.carpenterDoor;
+    if(tx===cD.x && ty===cD.y){ openShop({name:'Carpenter',role:'Build',shop:'build'}); return; }
+    const comD = World.farm.communityDoor;
+    if(tx===comD.x && ty===comD.y){ openCommunityPanel(); return; }
+  }
+  // Town building doors
+  if(Game.map==='town' && World.town.buildings){
+    for(const b of World.town.buildings){
+      if(b.door && tx===b.door.x && ty===b.door.y){
+        if(b.type==='shop') openShop({name:'General Store',role:'Goods',shop:'seeds'});
+        else if(b.type==='blacksmith') openShop({name:'Blacksmith',role:'Weapons & Armor',shop:'weapons'});
+        else if(b.type==='tavern') openShop({name:'Tavern',role:'Drinks',shop:'drinks'});
+        else if(b.type==='carpenter') openShop({name:'Carpenter',role:'Build',shop:'build'});
+        else toast('Door locked');
+        Snd.play('door');
+        return;
+      }
+    }
+  }
+
+  const mon = findMonsterAt(tx,ty);
+  if(mon){ attack(tx,ty); return; }
+
+  if(Game.map==='farm'){
+    const an = World.farm.animals.find(a=>Math.abs(a.x-(tx*TILE+8))<14 && Math.abs(a.y-(ty*TILE+16))<14);
+    if(an){ collectAnimal(an); return; }
+  }
+
+  const npc = findNPCAt(tx,ty);
+  if(npc){ talkToNPC(npc); return; }
+
+  const tool = Game.hotbar[Game.selected];
+  const t = tileAt(tx,ty);
+  const obj = findObjectAt(tx,ty);
+
+  if(obj && obj.type==='crop' && obj.stage===4){
+    Game.inv[obj.cropType] = (Game.inv[obj.cropType]||0)+1;
+    toast('+1 '+obj.cropType); Snd.play('harvest'); removeObject(obj);
+    startAction('use'); consumeEnergy(1); return;
+  }
+
+  if(tool==='axe'){
+    if(obj && (obj.type==='tree'||obj.type==='pine')){
+      startAction('use'); obj.hp--; Snd.play('chop');
+      spawnParticle(obj.x,obj.y-20,'#8a5a30'); consumeEnergy(2);
+      if(obj.hp<=0){ const n = 3+Math.floor(Math.random()*3); Game.inv.wood += n; toast('+'+n+' 🪵'); removeObject(obj); }
+      return;
+    }
+    Snd.play('error'); return;
+  }
+  if(tool==='pick'){
+    if(obj && (obj.type==='rock_s'||obj.type==='rock_m'||obj.type==='rock_l')){
+      startAction('use'); obj.hp = (obj.hp||2)-1; Snd.play('pick');
+      spawnParticle(obj.x,obj.y-8,'#a0a0a8'); consumeEnergy(2);
+      if(obj.hp<=0){ const n = 2+Math.floor(Math.random()*3); Game.inv.stone += n; toast('+'+n+' 🪨'); removeObject(obj); }
+      return;
+    }
+    if(t===T_CU||t===T_IR||t===T_GO||t===T_IRID){
+      startAction('use'); Snd.play('pick'); consumeEnergy(2);
+      let ore = 'copper', cnt = 1+Math.floor(Math.random()*2);
+      if(t===T_IR) ore='iron';
+      else if(t===T_GO) ore='gold_ore';
+      else if(t===T_IRID) ore='iri';
+      Game.inv[ore] = (Game.inv[ore]||0)+cnt;
+      currentMap().tiles[ty][tx] = T_CAVE;
+      toast('+'+cnt+' '+ore);
+      return;
+    }
+    Snd.play('error'); return;
+  }
+  if(tool==='hoe'){
+    if(t===T_GRASS){ currentMap().tiles[ty][tx] = T_TILL; startAction('use'); consumeEnergy(2); return; }
+    return;
+  }
+  if(tool==='can'){
+    if(t===T_TILL){ currentMap().tiles[ty][tx] = T_TILL_WET; startAction('use'); Snd.play('water'); consumeEnergy(1); return; }
+    return;
+  }
+  if(tool==='seed'){
+    if(Game.inv.seeds<=0){ Snd.play('error'); toast('No seeds'); return; }
+    if(t===T_TILL||t===T_TILL_WET){
+      Game.inv.seeds--; consumeEnergy(1);
+      const type = CROPS[Math.floor(Math.random()*CROPS.length)];
+      currentMap().objects.push({type:'crop',cropType:type,x:tx*TILE+8,y:(ty+1)*TILE,tx,ty,stage:0,watered:false,solid:false,sortY:(ty+1)*TILE});
+      startAction('use'); Snd.play('plant'); return;
+    }
+    return;
+  }
+  if(tool==='rod'){
+    if(t===T_WATER||t===T_DEEP){ startFishing(); return; }
+    Snd.play('error'); toast('Stand by water'); return;
+  }
+}
+
+function startFishing(){ Game.fishing = {timer:0, duration:2500, caught:false}; startAction('use'); }
+
+function getFishingResult(){
+  const hour = Math.floor(Game.time/60)%24;
+  const time = (hour<20&&hour>=6)?'day':'night';
+  const loc = Game.map==='beach' ? ((player.y>20*TILE)?'deep':'beach') : (Game.map==='mountain'?'mountain':'farm');
+  let pool = FISH_LIST.filter(f=>(f.loc===loc||(f.loc==='beach'&&loc==='deep')) && (f.time===time||f.time==='any') && (f.weather===Game.weather||f.weather==='any'));
+  if(!pool.length) pool = FISH_LIST.filter(f=>f.loc==='beach');
+  let total = 0; for(const f of pool) total += f.chance;
+  let r = Math.random()*total;
+  for(const f of pool){ r -= f.chance; if(r<=0) return f; }
+  return pool[0];
+}
+
+function collectAnimal(a){
+  startAction('use');
+  if(a.growthStage<1){ toast(t('notAdult')); return; }
+  if(a.type==='horse'){ toggleHorse(a); return; }
+  if(a.produceReady){
+    const type = ANIMAL_TYPES[a.type];
+    Game.inv[type.product] = (Game.inv[type.product]||0)+1;
+    a.produceReady = false; a.produceTimer = type.time;
+    toast(type.icon+' +1 '+type.product);
+    Snd.play(a.type==='chicken'||a.type==='duck'?'cluck':'moo');
+  } else {
+    Snd.play(a.type==='chicken'||a.type==='duck'?'cluck':'moo');
+  }
+}
+
+function toggleHorse(horse){
+  if(Game.onHorse){
+    Game.onHorse = false;
+    if(horse){ horse.mounted = false; player.x = horse.x-8; player.y = horse.y; }
+    toast('Dismounted');
+    Snd.play('neigh');
+  } else {
+    if(!horse) horse = World.farm.animals.find(a=>a.type==='horse'&&a.growthStage>=1);
+    if(!horse){ toast(t('noHorse')); return; }
+    const d = Math.hypot(player.x-horse.x, player.y-horse.y);
+    if(d<60){
+      Game.onHorse = true; horse.mounted = true;
+      toast(t('mounted')); Snd.play('neigh');
+    } else toast('Get closer to horse');
+  }
+}
+
+function talkToNPC(npc){
+  const active = Game.activeQuests.find(q=>q.npcId===npc.id);
+  if(!npc.questGiven){
+    const item = Game.inv[npc.quest.item]||0;
+    if(item>=npc.quest.count && !npc.questDone){
+      Game.inv[npc.quest.item] -= npc.quest.count;
+      Game.gold += npc.quest.reward;
+      npc.hearts = Math.min(10, npc.hearts+2);
+      npc.questDone = true; npc.questGiven = true;
+      toast('Quest done! +'+npc.quest.reward+' gold, +2 hearts');
+      Snd.play('levelup');
+      Game.completedQuests++;
+      return;
+    }
+    npc.questGiven = true;
+    Game.activeQuests.push({npcId:npc.id, item:npc.quest.item, count:npc.quest.count, reward:npc.quest.reward});
+    toast(npc.name+': bring me '+npc.quest.count+' '+npc.quest.item);
+    Snd.play('click');
+    return;
+  }
+  if(npc.shop){ openShop(npc); return; }
+  if(Game.inv[npc.fav] && Game.inv[npc.fav]>0 && !npc.giftedToday){
+    npc.giftedToday = true;
+    Game.inv[npc.fav]--;
+    npc.hearts = Math.min(10, npc.hearts+1);
+    toast(npc.name+' liked '+npc.fav+'! +1♥');
+    Snd.play('click');
+    return;
+  }
+  const chats = ['Hello!','Nice weather!','I love the farm.','How are you?','Good luck!'];
+  toast(npc.name+': '+chats[Math.floor(Math.random()*chats.length)]);
+}
+
+// ============================================================
+// SHOPS
+// ============================================================
+function openShop(npc){
+  Game.shopOpen = true; Game.shopOwner = npc;
+  $('shopTitle').textContent = npc.name;
+  $('shopSub').textContent = npc.role;
+  $('panelShop').classList.add('show');
+  Game.panelOpen = 'shop';
+  renderShop();
+}
+function closeShop(){
+  Game.shopOpen = false;
+  $('panelShop').classList.remove('show');
+  Game.panelOpen = null;
+}
+function renderShop(){
+  const npc = Game.shopOwner;
+  const box = $('shopItems'); box.innerHTML = '';
+  const goldEl = document.createElement('div');
+  goldEl.style.cssText = 'color:#e8c060;font-size:13px;text-align:center;margin-bottom:4px';
+  goldEl.textContent = '🪙 '+Game.gold;
+  box.appendChild(goldEl);
+
+  function addRow(name, price, action, sell){
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<span class="name">'+name+'</span><span class="price">'+(sell?'+':'')+price+'</span>';
+    const btn = document.createElement('button');
+    btn.textContent = sell?t('sell'):t('buy');
+    btn.onclick = ()=>{
+      if(sell){
+        if(action()){ Snd.play('coin'); renderShop(); } else Snd.play('error');
+      } else if(Game.gold>=price){ Game.gold -= price; action(); Snd.play('coin'); renderShop(); }
+      else { Snd.play('error'); toast(t('notEnoughGold')); }
+    };
+    r.appendChild(btn);
+    box.appendChild(r);
+  }
+
+  switch(npc.shop){
+    case 'seeds': addRow('🌱 Seeds ×5', 20, ()=>Game.inv.seeds+=5); break;
+    case 'animals':
+      for(const k of ['chicken','duck','rabbit','pig','cow','goat']){
+        const at = ANIMAL_TYPES[k];
+        addRow(at.name+' ('+at.product+')', at.price, ()=>spawnAnimal(k));
+      }
+      break;
+    case 'horses': addRow('🐴 Horse', ANIMAL_TYPES.horse.price, ()=>spawnAnimal('horse')); break;
+    case 'weapons':
+      for(let i=1;i<WEAPONS.length;i++){
+        const w = WEAPONS[i];
+        addRow('⚔ '+w.name+' (dmg '+w.dmg+', crit '+(w.crit*100)+'%)', w.price, ()=>{ if(Game.weaponLevel<i) Game.weaponLevel=i; });
+      }
+      for(let i=1;i<ARMORS.length;i++){
+        const a = ARMORS[i];
+        addRow('🛡 '+a.name+' (+'+a.hp+' HP)', a.price, ()=>{ if(Game.armorLevel<i){ Game.armorLevel=i; Game.maxHp = 100+a.hp; } });
+      }
+      break;
+    case 'ores':
+      addRow('Copper ×5', 40, ()=>Game.inv.copper+=5);
+      addRow('Iron ×3', 80, ()=>Game.inv.iron+=3);
+      addRow('Gold ×2', 150, ()=>Game.inv.gold_ore+=2);
+      addRow('Iridium ×1', 300, ()=>Game.inv.iri+=1);
+      break;
+    case 'build':
+      addRow('🏠 Cabin (30🪵 500🪙)', 500, ()=>{ if(Game.inv.wood>=30){ Game.inv.wood-=30; Game.builtBuildings.push({type:'cabin',x:Math.floor(player.x/TILE)+2,y:Math.floor(player.y/TILE),w:5,h:4}); toast('Built!'); } else { toast(t('notEnoughRes')); throw 0; } });
+      addRow('🏚 Barn (60🪵 1000🪙)', 1000, ()=>{ if(Game.inv.wood>=60){ Game.inv.wood-=60; Game.builtBuildings.push({type:'house',x:Math.floor(player.x/TILE)+2,y:Math.floor(player.y/TILE),w:5,h:4}); toast('Built!'); } else { toast(t('notEnoughRes')); throw 0; } });
+      break;
+    case 'food': addRow('🍞 Bread ×3', 25, ()=>Game.inv.food+=3); break;
+    case 'heal':
+      addRow('❤ Potion', 60, ()=>Game.inv.potion=(Game.inv.potion||0)+1);
+      addRow('💊 Full heal', 100, ()=>{ Game.hp = Game.maxHp; });
+      break;
+    case 'drinks': addRow('🍺 Ale', 20, ()=>Game.inv.food+=1); break;
+    case 'exotic': addRow('🌱 Rare seeds ×3', 90, ()=>Game.inv.seeds+=3); break;
+    case 'fish': addRow('Sell all fish', 15, ()=>{ let n = Game.inv.fish||0; if(n>0){ Game.gold += n*15; Game.inv.fish = 0; return true; } return false; }, true); break;
+  }
+
+  // Universal sell
+  addRow('Sell raw goods', 8, ()=>{
+    let sum = 0;
+    for(const k of ['wood','stone','copper','iron','gold_ore','iri','fish','egg','milk','wool','slime','bone','feather']){
+      if(Game.inv[k]){ sum += Game.inv[k]*8; Game.inv[k] = 0; }
+    }
+    if(sum>0){ Game.gold += sum; toast('+'+sum+'🪙'); return true; }
+    return false;
+  }, true);
+}
+$('closeShop').onclick = ()=>{ Snd.play('click'); closeShop(); };
+
+function openCommunityPanel(){
+  Game.shopOpen = true; Game.panelOpen = 'shop';
+  $('shopTitle').textContent = 'Community Center';
+  $('shopSub').textContent = 'Donate goods';
+  $('panelShop').classList.add('show');
+  const box = $('shopItems'); box.innerHTML = '';
+
+  for(const b of Game.bundles){
+    const r = document.createElement('div'); r.className = 'row';
+    let html = '<span class="name"><b>'+b.name+'</b>'+(b.done?' ✓':'')+'<br>';
+    for(const k in b.items){
+      const need = b.items[k];
+      const have = Game.inv[k]||0;
+      html += k+': '+Math.min(have,need)+'/'+need+' ';
+    }
+    html += '<br><span style="color:#ffd54a">+'+b.reward+'🪙</span></span>';
+    r.innerHTML = html;
+    if(!b.done){
+      const btn = document.createElement('button');
+      btn.textContent = 'Donate';
+      btn.onclick = ()=>{
+        let can = true;
+        for(const k in b.items) if((Game.inv[k]||0)<b.items[k]) can = false;
+        if(can){
+          for(const k in b.items) Game.inv[k] -= b.items[k];
+          b.done = true; Game.gold += b.reward;
+          Snd.play('donate');
+          toast('Bundle complete! +'+b.reward+'🪙');
+          closeShop(); setTimeout(openCommunityPanel, 100);
+        } else { Snd.play('error'); toast(t('notEnoughRes')); }
+      };
+      r.appendChild(btn);
+    }
+    box.appendChild(r);
+  }
+}
+
+// ============================================================
+// MINE
+// ============================================================
+function generateMine(depth){
+  const m = World.mine;
+  m.w = 30; m.h = 30;
+  m.tiles = makeMap(30,30,T_ROCK);
+  const rooms = [];
+  const numRooms = 3+Math.min(8,Math.floor(depth/10));
+  for(let i=0;i<numRooms;i++){
+    const rw = 4+Math.floor(Math.random()*5);
+    const rh = 4+Math.floor(Math.random()*5);
+    const rx = 2+Math.floor(Math.random()*(26-rw));
+    const ry = 2+Math.floor(Math.random()*(26-rh));
+    rooms.push({x:rx,y:ry,w:rw,h:rh});
+    for(let y=ry;y<ry+rh;y++) for(let x=rx;x<rx+rw;x++) m.tiles[y][x] = T_CAVE;
+  }
+  for(let i=1;i<rooms.length;i++){
+    const a = rooms[i-1], b = rooms[i];
+    const ax = Math.floor(a.x+a.w/2), ay = Math.floor(a.y+a.h/2);
+    const bx = Math.floor(b.x+b.w/2), by = Math.floor(b.y+b.h/2);
+    for(let x=Math.min(ax,bx);x<=Math.max(ax,bx);x++) m.tiles[ay][x] = T_CAVE;
+    for(let y=Math.min(ay,by);y<=Math.max(ay,by);y++) m.tiles[y][bx] = T_CAVE;
+  }
+  m.objects = [];
+  for(const r of rooms){
+    for(let y=r.y;y<r.y+r.h;y++) for(let x=r.x;x<r.x+r.w;x++){
+      if(m.tiles[y][x]!==T_CAVE) continue;
+      if(Math.random()<0.08){
+        let ore = T_CU;
+        const r0 = Math.random();
+        if(depth>60 && r0<0.15) ore = T_IRID;
+        else if(depth>40 && r0<0.35) ore = T_GO;
+        else if(depth>20 && r0<0.5) ore = T_IR;
+        m.tiles[y][x] = ore;
+      }
+    }
+  }
+  const last = rooms[rooms.length-1];
+  m.ladder = {x:last.x+Math.floor(last.w/2), y:last.y+Math.floor(last.h/2)};
+
+  Game.monsters = [];
+  const avail = MONSTER_TYPES.filter((t,i)=>{
+    if(i===0) return true;
+    if(i===1&&depth>5) return true;
+    if(i===2&&depth>15) return true;
+    if(i===3&&depth>25) return true;
+    if(i===4&&depth>40) return true;
+    return false;
+  });
+  const count = 2+Math.min(8, Math.floor(depth/5));
+  for(let i=0;i<count;i++){
+    const r = rooms[Math.floor(Math.random()*rooms.length)];
+    const ty = avail[Math.floor(Math.random()*avail.length)];
+    const mm = { typeId:ty.id, name:ty.name, sprite:ty.sprite,
+      x:(r.x+1+Math.random()*(r.w-2))*TILE+8,
+      y:(r.y+1+Math.random()*(r.h-2))*TILE+16,
+      hp:ty.hp, maxHp:ty.hp, dmg:ty.dmg,
+      dir:1, frame:0, frameTimer:0, hitTimer:0, moveTimer:1500,
+      wanderTarget:{x:0,y:0} };
+    mm.wanderTarget = {x:mm.x, y:mm.y};
+    Game.monsters.push(mm);
+  }
+  const first = rooms[0];
+  player.x = first.x*TILE+8;
+  player.y = (first.y+1)*TILE+16;
+  m.depth = depth;
+  toast('Mine — Floor '+depth);
+}
+
+// ============================================================
+// TRANSITIONS
+// ============================================================
+function checkMapTransition(){
+  const pdX = player.x+16, pdY = player.y+24;
+  const tx = Math.floor(pdX/TILE), ty = Math.floor(pdY/TILE);
+  if(Game.map==='farm'){
+    if(ty<1 && tx>=22 && tx<=28) switchMap('town', 24*TILE+8, 37*TILE);
+    else if(ty>38 && tx>=22 && tx<=28) switchMap('beach', 24*TILE+8, 1*TILE+16);
+    else if(tx<1 && ty>=18 && ty<=24) switchMap('forest', 37*TILE+8, 20*TILE+16);
+    else if(tx>48 && ty>=18 && ty<=24) fadeTo(()=>{ generateMine(1); Game.map='mine'; player.targetX=null; });
+  } else if(Game.map==='town'){
+    if(ty>38 && tx>=22 && tx<=28) switchMap('farm', 24*TILE+8, 1*TILE+16);
+    else if(ty<1 && tx>=22 && tx<=28) switchMap('mountain', 20*TILE+8, 37*TILE+16);
+  } else if(Game.map==='beach'){
+    if(ty<1 && tx>=22 && tx<=28) switchMap('farm', 24*TILE+8, 37*TILE+16);
+  } else if(Game.map==='forest'){
+    if(tx>38 && ty>=18 && ty<=24) switchMap('farm', 1*TILE+16, 21*TILE+16);
+  } else if(Game.map==='mountain'){
+    if(ty>38 && tx>=18 && tx<=22) switchMap('town', 25*TILE+8, 1*TILE+16);
+  } else if(Game.map==='mine'){
+    const m = currentMap();
+    if(m.ladder && tx===m.ladder.x && ty===m.ladder.y){
+      fadeTo(()=>{ generateMine(m.depth+1); player.targetX=null; });
+    }
+    if(ty===1 && tx<3) fadeTo(()=>{ Game.map='farm'; player.x=48*TILE; player.y=20*TILE+16; });
+  }
+}
+function switchMap(name,px,py){
+  fadeTo(()=>{
+    Game.map = name; player.x = px; player.y = py;
+    player.targetX = null; player.targetY = null; player.actionTarget = null;
+    toast(t(name));
+  });
+}
+
+// ============================================================
+// SLEEP
+// ============================================================
+function startSleep(){
+  if(Game.sleeping) return;
+  Game.sleeping = true;
+  player.action = 'sleep';
+  player.targetX = null; player.targetY = null;
+  Snd.play('sleep'); Snd.stopMusic();
+  $('fade').classList.add('active');
+  const el = $('centerText');
+  el.innerHTML = '<div class="big">'+t('sleep')+'</div>';
+  el.classList.add('show');
+  setTimeout(()=>{
+    advanceDay(true);
+    saveGame();
+    el.innerHTML = '<div class="big">'+t('day')+' '+Game.day+'</div><div class="small">'+t(SEASONS[Game.season])+' • '+Game.seasonDay+'/7 • 6:00</div>';
+    setTimeout(()=>{ el.classList.remove('show'); $('fade').classList.remove('active'); Snd.startMusic(); }, 1200);
+  }, 1200);
+}
+function forceSleep(){
+  if(Game.sleeping) return;
+  Game.sleeping = true;
+  player.action = 'sleep';
+  Snd.stopMusic();
+  $('fade').classList.add('active');
+  const el = $('centerText');
+  el.innerHTML = '<div class="big">...</div>';
+  el.classList.add('show');
+  setTimeout(()=>{
+    advanceDay(false);
+    el.innerHTML = '<div class="big">'+t('day')+' '+Game.day+'</div>';
+    setTimeout(()=>{ el.classList.remove('show'); $('fade').classList.remove('active'); Snd.startMusic(); }, 1200);
+  }, 1200);
+}
+function advanceDay(slept){
+  Game.day++; Game.seasonDay++;
+  if(Game.seasonDay>7){ Game.seasonDay = 1; Game.season = (Game.season+1)%4; toast(t('season')+': '+t(SEASONS[Game.season])); }
+  Game.time = 6*60;
+  Game.energy = slept ? Game.maxEnergy : Math.floor(Game.maxEnergy*0.6);
+  Game.hp = Game.maxHp;
+  const w = Math.random();
+  if(Game.season===3 && w<0.35) Game.weather = 'snow';
+  else if(w<0.25) Game.weather = 'rain';
+  else if(w<0.32) Game.weather = 'storm';
+  else if(w<0.42) Game.weather = 'fog';
+  else Game.weather = 'sunny';
+  for(const o of World.farm.objects){
+    if(o.type==='crop'){
+      if(o.watered && o.stage<4) o.stage++;
+      o.watered = false;
+      if(Game.weather==='rain') o.watered = true;
+    }
+  }
+  const tiles = World.farm.tiles;
+  for(let y=0;y<tiles.length;y++) for(let x=0;x<tiles[0].length;x++){
+    if(tiles[y][x]===T_TILL_WET) tiles[y][x] = T_TILL;
+    if(Game.weather==='rain' && tiles[y][x]===T_TILL) tiles[y][x] = T_TILL_WET;
+  }
+  for(const a of World.farm.animals){
+    if(Math.random()<0.75) a.produceReady = true;
+    if(a.growthStage<1){
+      a.growTimer = (a.growTimer||0)+1;
+      if(a.growTimer>=3){ a.growthStage = 1; }
+    }
+  }
+  for(const n of NPC_DATA){ if(!n.giftedToday) n.hearts = Math.max(0, n.hearts-0.3); n.giftedToday = false; }
+  Game.fishing = null; player.action = null;
+  Game.map = 'farm'; player.x = 24*TILE; player.y = 19*TILE;
+  player.targetX = null; player.targetY = null; player.actionTarget = null;
+  Game.sleeping = false;
+}
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+function saveGame(){
+  try{
+    const data = {
+      time:Game.time, day:Game.day, season:Game.season, seasonDay:Game.seasonDay, weather:Game.weather,
+      energy:Game.energy, hp:Game.hp, gold:Game.gold, inv:Game.inv,
+      weaponLevel:Game.weaponLevel, armorLevel:Game.armorLevel, maxHp:Game.maxHp,
+      map:Game.map, selected:Game.selected,
+      player:{x:player.x, y:player.y, dir:player.dir},
+      farm:{ tiles:World.farm.tiles, objects:World.farm.objects, animals:World.farm.animals },
+      npcs:NPC_DATA.map(n=>({id:n.id, hearts:n.hearts, questDone:n.questDone, questGiven:n.questGiven})),
+      activeQuests:Game.activeQuests, completedQuests:Game.completedQuests,
+      kills:Game.kills, bundles:Game.bundles, fishCaught:Game.fishCaught,
+      custom:{skin:Custom.skin, hair:Custom.hair, shirt:Custom.shirt, pants:Custom.pants, shoes:Custom.shoes, hat:Custom.hat},
+      lang:LANG,
+    };
+    localStorage.setItem('pixelfarm_save', JSON.stringify(data));
+    toast(t('saved'));
+  }catch(e){ console.error('Save error:', e); }
+}
+function loadGame(){
+  try{
+    const raw = localStorage.getItem('pixelfarm_save');
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    Game.time = d.time; Game.day = d.day; Game.season = d.season; Game.seasonDay = d.seasonDay;
+    Game.weather = d.weather||'sunny';
+    Game.energy = d.energy; Game.hp = d.hp||100; Game.gold = d.gold;
+    if(d.inv) Game.inv = Object.assign(Game.inv, d.inv);
+    Game.weaponLevel = d.weaponLevel||0;
+    Game.armorLevel = d.armorLevel||0;
+    Game.maxHp = d.maxHp || (100+(ARMORS[Game.armorLevel]?ARMORS[Game.armorLevel].hp:0));
+    Game.map = d.map||'farm';
+    Game.selected = d.selected||0;
+    player.x = d.player.x; player.y = d.player.y; player.dir = d.player.dir||'d';
+    if(d.farm && d.farm.tiles && d.farm.objects){
+      World.farm.tiles = d.farm.tiles;
+      World.farm.objects = d.farm.objects;
+      World.farm.animals = d.farm.animals||[];
+    }
+    if(d.npcs) for(const sd of d.npcs){
+      const n = NPC_DATA.find(x=>x.id===sd.id);
+      if(n){ n.hearts = sd.hearts||0; n.questDone = !!sd.questDone; n.questGiven = !!sd.questGiven; }
+    }
+    Game.activeQuests = d.activeQuests||[];
+    Game.completedQuests = d.completedQuests||0;
+    Game.kills = d.kills||{};
+    Game.fishCaught = d.fishCaught||{};
+    if(d.bundles) for(const b of d.bundles){
+      const target = Game.bundles.find(x=>x.id===b.id);
+      if(target) target.done = !!b.done;
+    }
+    if(d.custom){
+      Object.assign(Custom, d.custom);
+      Custom.save();
+      regenerateChar();
+    }
+    if(d.lang){
+      LANG = d.lang;
+      localStorage.setItem('pixelfarm_lang', LANG);
+    }
+    return true;
+  }catch(e){ console.error('Load error:', e); return false; }
+}
+function hasSave(){ try{ return !!localStorage.getItem('pixelfarm_save'); }catch(e){ return false; } }
+
+// ============================================================
+// INPUT
+// ============================================================
+window.addEventListener('keydown', e=>{
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  if(Game.paused) return;
+  if(Game.panelOpen){ if(k==='escape') closeAllPanels(); return; }
+  if(k==='escape'){ pauseGame(); return; }
+  if(k==='e'){ tryInteract(); return; }
+  if(k==='i'){ openInventory(); return; }
+  if(k==='m'){ openMapPanel(); return; }
+  if(k==='q'){ openQuests(); return; }
+  if(k==='h'){ toggleHorse(); return; }
+  if(k>='1'&&k<='7'){ Game.selected = parseInt(k)-1; Snd.play('click'); }
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+
+function closeAllPanels(){
+  for(const id of ['panelShop','panelInv','panelMap','panelQuest','panelSettings','panelCustom']){
+    $(id).classList.remove('show');
+  }
+  Game.panelOpen = null;
+  Game.shopOpen = false;
+}
+
+function screenToWorld(cx,cy){
+  const rect = cv.getBoundingClientRect();
+  const sx = (cx-rect.left) * (cv.width/rect.width) / SCALE;
+  const sy = (cy-rect.top) * (cv.height/rect.height) / SCALE;
+  return {x:sx+camera.x, y:sy+camera.y};
+}
+function isOverHUD(cx,cy){
+  const rect = cv.getBoundingClientRect();
+  const sx = (cx-rect.left) * (cv.width/rect.width) / SCALE;
+  const sy = (cy-rect.top) * (cv.height/rect.height) / SCALE;
+  const hbW = 7*24+4, hbX = (LW-hbW)/2;
+  if(sy>LH-32 && sx>hbX && sx<hbX+hbW) return 'hotbar';
+  if(sx<125 && sy<100) return 'info';
+  if(sx>LW-125 && sy<90){
+    if(sy>64 && sy<80){
+      if(sx>LW-124 && sx<LW-86) return 'inv';
+      if(sx>LW-84 && sx<LW-46) return 'map';
+      if(sx>LW-44 && sx<LW-6) return 'quest';
+    }
+    return 'info';
+  }
+  return false;
+}
+let pointerDown = false, pointerStartX = 0, pointerStartY = 0, pointerMoved = false;
+cv.addEventListener('pointerdown', e=>{
+  if(Game.paused || Game.panelOpen || Game.shopOpen) return;
+  e.preventDefault();
+  const rect = cv.getBoundingClientRect();
+  const lx = (e.clientX-rect.left) * (cv.width/rect.width) / SCALE;
+  const ly = (e.clientY-rect.top) * (cv.height/rect.height) / SCALE;
+  const over = isOverHUD(e.clientX, e.clientY);
+  if(over==='hotbar'){
+    const hbW = 7*24+4, hbX = (LW-hbW)/2, hbY = LH-32;
+    if(ly>hbY && ly<hbY+28 && lx>hbX && lx<hbX+hbW){
+      const idx = Math.floor((lx-hbX-2)/24);
+      if(idx>=0 && idx<Game.hotbar.length){ Game.selected = idx; Snd.play('click'); }
+    }
+    return;
+  }
+  if(over==='inv'){ openInventory(); return; }
+  if(over==='map'){ openMapPanel(); return; }
+  if(over==='quest'){ openQuests(); return; }
+  if(over) return;
+  pointerDown = true; pointerMoved = false;
+  pointerStartX = e.clientX; pointerStartY = e.clientY;
+  const p = screenToWorld(e.clientX, e.clientY);
+  const tx = Math.floor(p.x/TILE), ty = Math.floor(p.y/TILE);
+  player.actionTarget = {tx, ty, obj:findObjectAt(tx,ty), npc:findNPCAt(tx,ty), monster:findMonsterAt(tx,ty)};
+  player.targetX = p.x; player.targetY = p.y;
+});
+cv.addEventListener('pointermove', e=>{
+  if(!pointerDown || Game.paused || Game.panelOpen || Game.shopOpen) return;
+  if(Math.hypot(e.clientX-pointerStartX, e.clientY-pointerStartY)>12) pointerMoved = true;
+  if(pointerMoved){
+    const p = screenToWorld(e.clientX, e.clientY);
+    player.targetX = p.x; player.targetY = p.y;
+    const tx = Math.floor(p.x/TILE), ty = Math.floor(p.y/TILE);
+    player.actionTarget = {tx, ty, obj:findObjectAt(tx,ty), npc:findNPCAt(tx,ty), monster:findMonsterAt(tx,ty)};
+  }
+});
+window.addEventListener('pointerup', ()=>{ pointerDown = false; });
+window.addEventListener('pointercancel', ()=>{ pointerDown = false; });
+
+function tryInteract(){
+  const pdX = player.x+16, pdY = player.y+24;
+  if(Game.map==='farm'){
+    const hd = World.farm.houseDoor;
+    if(Math.hypot(pdX-(hd.x*TILE+TILE/2), pdY-(hd.y*TILE+TILE))<40){ startSleep(); return; }
+    const sd = World.farm.shopDoor;
+    if(Math.hypot(pdX-(sd.x*TILE+TILE/2), pdY-(sd.y*TILE+TILE))<40){ openShop({name:'Farm Shop',role:'Goods',shop:'seeds'}); return; }
+    const cD = World.farm.carpenterDoor;
+    if(Math.hypot(pdX-(cD.x*TILE+TILE/2), pdY-(cD.y*TILE+TILE))<40){ openShop({name:'Carpenter',role:'Build',shop:'build'}); return; }
+    const comD = World.farm.communityDoor;
+    if(Math.hypot(pdX-(comD.x*TILE+TILE/2), pdY-(comD.y*TILE+TILE))<40){ openCommunityPanel(); return; }
+  }
+  for(const n of NPC_DATA){
+    if(n.loc!==Game.map) continue;
+    if(Math.hypot(n.x-pdX, n.y-pdY)<40){ talkToNPC(n); return; }
+  }
+  toast(t('invalidAction'));
+}
+
+// ============================================================
+// PANELS
+// ============================================================
+function openInventory(){
+  Game.panelOpen = 'inv';
+  $('panelInv').classList.add('show');
+  $('invTitle').textContent = t('inventory');
+  const box = $('invItems'); box.innerHTML = '';
+  const goldEl = document.createElement('div');
+  goldEl.style.cssText = 'color:#e8c060;font-size:13px;text-align:center;margin-bottom:6px';
+  goldEl.textContent = '🪙 '+Game.gold+' | ⚡ '+Math.round(Game.energy)+' | ❤ '+Math.round(Game.hp)+'/'+Game.maxHp;
+  box.appendChild(goldEl);
+  const names = {wood:'🪵 Wood',stone:'🪨 Stone',seeds:'🌱 Seeds',fish:'🐟 Fish',food:'🍞 Food',
+    wheat:'🌾 Wheat',carrot:'🥕 Carrot',tomato:'🍅 Tomato',potato:'🥔 Potato',corn:'🌽 Corn',pumpkin:'🎃 Pumpkin',
+    egg:'🥚 Egg',milk:'🥛 Milk',goat_milk:'🥛 Goat Milk',wool:'🧶 Wool',truffle:'🍄 Truffle',feather:'🪶 Feather',
+    copper:'🟠 Copper',iron:'⚪ Iron',gold_ore:'🟡 Gold',iri:'💜 Iridium',coal:'⚫ Coal',
+    slime:'💚 Slime',bone:'🦴 Bone',potion:'🍷 Potion'};
+  for(const k in Game.inv){
+    if(Game.inv[k]>0){
+      const r = document.createElement('div'); r.className = 'row';
+      r.innerHTML = '<span class="name">'+(names[k]||k)+'</span><span class="price">'+Game.inv[k]+'</span>';
+      box.appendChild(r);
+    }
+  }
+  const fishList = document.createElement('div');
+  fishList.style.cssText = 'margin-top:10px;color:#e8c060;font-size:12px;text-align:center';
+  fishList.textContent = '🐟 Fish caught: '+Object.keys(Game.fishCaught).length+'/40';
+  box.appendChild(fishList);
+}
+$('closeInv').onclick = ()=>{ Snd.play('click'); closeAllPanels(); };
+
+function openMapPanel(){
+  Game.panelOpen = 'map';
+  $('panelMap').classList.add('show');
+  $('mapTitle').textContent = t('map');
+  const box = $('mapInfo'); box.innerHTML = '';
+  const info = [
+    ['🌾 '+t('farm'), 'Your home, animals, crops'],
+    ['🏘 '+t('town'), 'NPCs, shops, community'],
+    ['🏖 '+t('beach'), 'Fishing in salt water'],
+    ['🌲 '+t('forest'), 'Wood, rare trees'],
+    ['🏔 '+t('mountain'), 'Rocks, lake'],
+    ['⛏ '+t('mine'), 'Ores, monsters'],
+  ];
+  for(const [n,d] of info){
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<span class="name"><b>'+n+'</b><br><span style="font-size:10px;color:#8ac04a">'+d+'</span></span>';
+    box.appendChild(r);
+  }
+}
+$('closeMap').onclick = ()=>{ Snd.play('click'); closeAllPanels(); };
+
+function openQuests(){
+  Game.panelOpen = 'quest';
+  $('panelQuest').classList.add('show');
+  $('questTitle').textContent = t('quests');
+  const box = $('questItems'); box.innerHTML = '';
+  if(!Game.activeQuests.length){ box.innerHTML = '<div style="color:#8ac04a;text-align:center;padding:20px">No active quests</div>'; return; }
+  for(const q of Game.activeQuests){
+    const npc = NPC_DATA.find(n=>n.id===q.npcId);
+    const have = Game.inv[q.item]||0;
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<span class="name"><b>'+(npc?npc.name:'?')+'</b><br>'+q.item+': '+have+'/'+q.count+'<br><span style="color:#ffd54a">+'+q.reward+'🪙</span></span>';
+    box.appendChild(r);
+  }
+}
+$('closeQuest').onclick = ()=>{ Snd.play('click'); closeAllPanels(); };
+
+function openSettingsPanel(){
+  Game.panelOpen = 'settings';
+  $('panelSettings').classList.add('show');
+  $('setTitle').textContent = t('settings');
+  const box = $('setItems'); box.innerHTML = '';
+  const langRow = document.createElement('div'); langRow.className = 'row';
+  langRow.innerHTML = '<span class="name">'+t('language')+'</span>';
+  const langSel = document.createElement('select');
+  langSel.style.cssText = 'background:#2a1a0a;color:#ffe8b0;border:1px solid #8a5a2a;padding:4px;font-family:inherit';
+  for(const code of ['en','ru','es','fr','de','pt','zh','ja']){
+    const o = document.createElement('option'); o.value = code; o.textContent = code.toUpperCase();
+    if(code===LANG) o.selected = true;
+    langSel.appendChild(o);
+  }
+  langSel.onchange = ()=>{ LANG = langSel.value; localStorage.setItem('pixelfarm_lang', LANG); applyLanguage(); };
+  langRow.appendChild(langSel);
+  box.appendChild(langRow);
+}
+$('closeSet').onclick = ()=>{ Snd.play('click'); closeAllPanels(); };
+
+function openCustomPanel(){
+  Game.panelOpen = 'custom';
+  $('panelCustom').classList.add('show');
+  $('custTitle').textContent = t('character');
+  const box = $('custItems'); box.innerHTML = '';
+
+  function colorRow(label, colors, current, setter){
+    const labelEl = document.createElement('div');
+    labelEl.className = 'opt-label'; labelEl.textContent = label;
+    box.appendChild(labelEl);
+    const rowEl = document.createElement('div'); rowEl.className = 'color-row';
+    colors.forEach((col, i)=>{
+      const sw = document.createElement('div');
+      sw.className = 'swatch'+(i===current?' active':'');
+      sw.style.background = col;
+      sw.onclick = ()=>{ setter(i); Custom.save(); regenerateChar(); openCustomPanel(); };
+      rowEl.appendChild(sw);
+    });
+    box.appendChild(rowEl);
+  }
+
+  colorRow(t('skin'), SKIN_TONES, Custom.skin, i=>Custom.skin=i);
+  colorRow(t('hair'), HAIR_COLORS, Custom.hair, i=>Custom.hair=i);
+  colorRow(t('shirt'), SHIRT_COLORS, Custom.shirt, i=>Custom.shirt=i);
+  colorRow(t('pants'), PANTS_COLORS, Custom.pants, i=>Custom.pants=i);
+  colorRow(t('shoes'), SHOE_COLORS, Custom.shoes, i=>Custom.shoes=i);
+
+  // Hat
+  const labelEl = document.createElement('div');
+  labelEl.className = 'opt-label'; labelEl.textContent = t('hat');
+  box.appendChild(labelEl);
+  const hatRow = document.createElement('div'); hatRow.className = 'color-row';
+  HATS.forEach((h, i)=>{
+    const btn = document.createElement('button');
+    btn.style.cssText = 'min-width:auto;padding:4px 8px;font-size:10px;background:'+(i===Custom.hat?'#4a7a2a':'#3a2a1a')+';border-color:'+(i===Custom.hat?'#8ac04a':'#6a4a2a');
+    btn.textContent = h.name;
+    btn.onclick = ()=>{ Custom.hat = i; Custom.save(); regenerateChar(); openCustomPanel(); };
+    hatRow.appendChild(btn);
+  });
+  box.appendChild(hatRow);
+}
+$('closeCust').onclick = ()=>{ Snd.play('click'); closeAllPanels(); };
+
+// ============================================================
+// APPLY LANGUAGE
+// ============================================================
+function applyLanguage(){
+  document.getElementById('titleText').textContent = 'PIXEL FARM';
+  document.getElementById('btnNew').textContent = t('newGame');
+  document.getElementById('btnContinue').textContent = t('cont');
+  document.getElementById('btnSettings').textContent = t('settings');
+  document.getElementById('btnHelp').textContent = t('controls');
+  document.getElementById('helpTitle').textContent = t('controls');
+  document.getElementById('helpBody').innerHTML = t('helpText');
+  document.getElementById('btnHelpBack').textContent = t('back');
+  document.getElementById('pauseTitle').textContent = t('paused');
+  document.getElementById('btnResume').textContent = t('resume');
+  document.getElementById('btnSave2').textContent = t('save');
+  document.getElementById('btnSettings2').textContent = t('settings');
+  document.getElementById('btnToMain').textContent = t('mainMenu');
+  document.getElementById('closeShop').textContent = t('close');
+  document.getElementById('closeInv').textContent = t('close');
+  document.getElementById('closeMap').textContent = t('close');
+  document.getElementById('closeQuest').textContent = t('close');
+  document.getElementById('closeSet').textContent = t('close');
+  document.getElementById('closeCust').textContent = t('close');
+}
+applyLanguage();
+
+// ============================================================
+// UPDATE
+// ============================================================
+let lastTime = performance.now();
+function update(dt){
+  if(Game.paused || Game.panelOpen || Game.sleeping) return;
+  Game.time += dt*0.001*(1200/(20*60));
+  if(Game.time>=26*60){ Game.time = 26*60; forceSleep(); }
+  if(Game.toastTimer>0) Game.toastTimer -= dt;
+  if(player.action){ player.actionTimer -= dt; if(player.actionTimer<=0) player.action = null; }
+  if(player.invuln>0) player.invuln -= dt;
+
+  if(Game.fishing){
+    Game.fishing.timer += dt;
+    if(Game.fishing.timer>Game.fishing.duration && !Game.fishing.caught){
+      Game.fishing.caught = true;
+      const f = getFishingResult();
+      if(Math.random() < f.chance+0.2){
+        Game.fishCaught[f.name] = (Game.fishCaught[f.name]||0)+1;
+        Game.inv.fish = (Game.inv.fish||0)+1;
+        Snd.play('fish');
+        toast('🐟 '+f.name+' ('+f.price+'🪙)');
+      } else { Snd.play('error'); toast('Nothing...'); }
+    }
+    if(Game.fishing.timer>Game.fishing.duration+800) Game.fishing = null;
+    return;
+  }
+
+  // Movement
+  let dx = 0, dy = 0;
+  if(keys['w']||keys['arrowup']){ dy = -1; player.dir = 'u'; }
+  if(keys['s']||keys['arrowdown']){ dy = 1; player.dir = 'd'; }
+  if(keys['a']||keys['arrowleft']){ dx = -1; player.dir = 'l'; }
+  if(keys['d']||keys['arrowright']){ dx = 1; player.dir = 'r'; }
+  if(dx!==0||dy!==0){ player.targetX = null; player.targetY = null; player.actionTarget = null; }
+
+  if(dx===0 && dy===0 && player.targetX!==null){
+    const fx = player.x+16, fy = player.y+24;
+    const tdx = player.targetX-fx, tdy = player.targetY-fy;
+    const dist = Math.sqrt(tdx*tdx+tdy*tdy);
+    if(dist<6){
+      player.targetX = null; player.targetY = null;
+      if(player.actionTarget){
+        const atx = player.actionTarget.tx, aty = player.actionTarget.ty;
+        const ddx = atx*TILE+TILE/2-fx, ddy = aty*TILE+TILE/2-fy;
+        if(Math.abs(ddx)>Math.abs(ddy)) player.dir = ddx>0?'r':'l';
+        else player.dir = ddy>0?'d':'u';
+        if(Math.abs(ddx)<TILE*1.6 && Math.abs(ddy)<TILE*1.7){
+          doActionAt(atx, aty);
+        }
+        player.actionTarget = null;
+      }
+    } else {
+      dx = tdx/dist; dy = tdy/dist;
+      if(Math.abs(tdx)>Math.abs(tdy)) player.dir = tdx>0?'r':'l';
+      else player.dir = tdy>0?'d':'u';
+    }
+  }
+  if(dx!==0 && dy!==0){ dx *= 0.7071; dy *= 0.7071; }
+
+  const moving = (dx!==0 || dy!==0);
+  const speed = Game.onHorse ? player.speed*2.5 : player.speed;
+  const nx = player.x + dx*speed;
+  const ny = player.y + dy*speed;
+  let blockedX = false, blockedY = false;
+  if(!collides(nx, player.y)) player.x = nx; else blockedX = true;
+  if(!collides(player.x, ny)) player.y = ny; else blockedY = true;
+  if(moving && blockedX && blockedY){
+    player.stuckTimer = (player.stuckTimer||0) + dt;
+    if(player.stuckTimer>1500){
+      player.targetX = null; player.targetY = null; player.actionTarget = null;
+      player.stuckTimer = 0;
+    }
+  } else player.stuckTimer = 0;
+
+  if(Game.onHorse){
+    const horse = World.farm.animals.find(a=>a.type==='horse'&&a.mounted);
+    if(horse){ horse.x = player.x+8; horse.y = player.y+24; }
+  }
+
+  if(moving){
+    player.walkTimer += dt;
+    const ft = Game.onHorse ? 90 : 140;
+    while(player.walkTimer>ft){
+      player.walkTimer -= ft;
+      const old = player.walkPhase;
+      player.walkPhase = (player.walkPhase+1) % 4;
+      if((old===0||old===2) && (player.walkPhase===1||player.walkPhase===3)) Snd.play('step');
+    }
+  } else { player.walkPhase = 0; player.walkTimer = 0; }
+
+  const targetCamX = player.x+16-LW/2;
+  const targetCamY = player.y+24-LH/2;
+  camera.x += (targetCamX-camera.x) * Math.min(1, dt*0.02);
+  camera.y += (targetCamY-camera.y) * Math.min(1, dt*0.02);
+  const m = currentMap();
+  camera.x = Math.max(0, Math.min(camera.x, Math.max(0, m.w*TILE-LW)));
+  camera.y = Math.max(0, Math.min(camera.y, Math.max(0, m.h*TILE-LH)));
+
+  for(let i=Game.particles.length-1;i>=0;i--){
+    const p = Game.particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= dt;
+    if(p.life<=0) Game.particles.splice(i,1);
+  }
+
+  // Animals
+  if(Game.map==='farm'){
+    for(const a of World.farm.animals){
+      if(a.mounted) continue;
+      if(a.produceTimer>0){ a.produceTimer -= dt; if(a.produceTimer<=0){ a.produceReady = true; a.produceTimer = 0; } }
+      a.moveTimer -= dt;
+      if(a.moveTimer<=0){
+        a.moveTimer = 2000+Math.random()*2500;
+        const pa = World.farm.penArea;
+        a.tx = (pa.x+1+Math.random()*(pa.w-2))*TILE;
+        a.ty = (pa.y+1+Math.random()*(pa.h-2))*TILE+16;
+      }
+      const adx = a.tx-a.x, ady = a.ty-a.y;
+      const ad = Math.sqrt(adx*adx+ady*ady);
+      if(ad>2){ a.x += adx/ad*0.35; a.y += ady/ad*0.35; a.dir = adx>0?1:-1;
+        a.frameTimer += dt; if(a.frameTimer>260){ a.frameTimer=0; a.frame = (a.frame+1)%2; } }
+    }
+  }
+
+  // NPCs
+  for(const n of NPC_DATA){
+    if(n.loc!==Game.map) continue;
+    n.moveTimer -= dt;
+    if(n.moveTimer<=0){
+      n.moveTimer = 2500+Math.random()*3000;
+      n.wanderTarget = {x:n.hx*TILE+8+(Math.random()-0.5)*40, y:n.hy*TILE+16+(Math.random()-0.5)*40};
+    }
+    const ndx = n.wanderTarget.x-n.x, ndy = n.wanderTarget.y-n.y;
+    const nd = Math.sqrt(ndx*ndx+ndy*ndy);
+    if(nd>2){
+      const sp = 0.3;
+      const nxn = n.x+ndx/nd*sp, nyn = n.y+ndy/nd*sp;
+      let moved = false;
+      if(!collidesTilesOnly(nxn,n.y)){ n.x = nxn; moved = true; }
+      if(!collidesTilesOnly(n.x,nyn)){ n.y = nyn; moved = true; }
+      if(moved){
+        if(ndx>1) n.dir = 'r'; else if(ndx<-1) n.dir = 'l';
+        n.walkTimer += dt;
+        if(n.walkTimer>180){ n.walkTimer = 0; n.walkPhase = (n.walkPhase+1)%4; }
+      } else n.moveTimer = 0;
+    }
+  }
+
+  // Monsters
+  if(Game.map==='mine'){
+    for(const mon of Game.monsters){
+      if(mon.hitTimer>0){ mon.hitTimer -= dt; continue; }
+      const ddx = player.x+16-mon.x, ddy = player.y+24-mon.y;
+      const dist = Math.sqrt(ddx*ddx+ddy*ddy);
+      if(dist<80){
+        const sp = 0.5;
+        const nxn = mon.x+ddx/dist*sp, nyn = mon.y+ddy/dist*sp;
+        if(!collidesTilesOnly(nxn, mon.y)) mon.x = nxn;
+        if(!collidesTilesOnly(mon.x, nyn)) mon.y = nyn;
+        mon.dir = ddx>0?1:-1;
+        if(dist<20 && player.invuln<=0){
+          Game.hp -= mon.dmg;
+          player.invuln = 800;
+          Snd.play('hurt');
+          spawnParticle(player.x+16, player.y+16, '#ff2020');
+          if(Game.hp<=0){ Game.hp = Game.maxHp; Game.map='farm'; player.x=24*TILE; player.y=19*TILE; toast('Passed out...'); }
+        }
+      } else {
+        mon.moveTimer -= dt;
+        if(mon.moveTimer<=0){ mon.moveTimer = 2000+Math.random()*2000;
+          mon.wanderTarget = {x:mon.x+(Math.random()-0.5)*80, y:mon.y+(Math.random()-0.5)*80}; }
+        const mdx = mon.wanderTarget.x-mon.x, mdy = mon.wanderTarget.y-mon.y;
+        const md = Math.sqrt(mdx*mdx+mdy*mdy);
+        if(md>2){ mon.x += mdx/md*0.25; mon.y += mdy/md*0.25; mon.dir = mdx>0?1:-1; }
+      }
+      mon.frameTimer += dt;
+      if(mon.frameTimer>300){ mon.frameTimer = 0; mon.frame = (mon.frame+1)%2; }
+    }
+  }
+
+  // Day/night
+  const t2 = Game.time;
+  let dn = 0;
+  if(t2>=6*60 && t2<8*60) dn = 0.5 - ((t2-6*60)/120)*0.5;
+  else if(t2>=8*60 && t2<18*60) dn = 0;
+  else if(t2>=18*60 && t2<21*60) dn = ((t2-18*60)/180)*0.6;
+  else if(t2>=21*60 || t2<6*60) dn = 0.6;
+  if(Game.map==='mine') dn = 0.75;
+  Game.dayNight = dn;
+
+  checkMapTransition();
+}
+
+function collidesTilesOnly(x,y){
+  const hbX = x+8, hbY = y+18, hbW = 16, hbH = 14;
+  const corners = [[hbX,hbY],[hbX+hbW-1,hbY],[hbX,hbY+hbH-1],[hbX+hbW-1,hbY+hbH-1]];
+  for(const [cx,cy] of corners){
+    const t = tileAt(Math.floor(cx/TILE), Math.floor(cy/TILE));
+    if(BLOCKING.has(t)) return true;
+  }
+  return false;
+}
+function collides(x,y){
+  const hbX = x+8, hbY = y+18, hbW = 16, hbH = 14;
+  const corners = [[hbX,hbY],[hbX+hbW-1,hbY],[hbX,hbY+hbH-1],[hbX+hbW-1,hbY+hbH-1]];
+  for(const [cx,cy] of corners){
+    const t = tileAt(Math.floor(cx/TILE), Math.floor(cy/TILE));
+    if(BLOCKING.has(t)) return true;
+  }
+  const m = currentMap();
+  if(m.objects) for(const o of m.objects){
+    if(!o.solid) continue;
+    let ox, oy, ow, oh;
+    if(o.type==='tree' || o.type==='pine'){ ox = o.tx*TILE+1; oy = (o.ty+1)*TILE-12; ow = TILE-2; oh = 12; }
+    else if(o.type==='rock_s'){ ox = o.tx*TILE+2; oy = (o.ty+1)*TILE-10; ow = TILE-4; oh = 10; }
+    else if(o.type==='rock_m'){ ox = o.tx*TILE-2; oy = (o.ty+1)*TILE-11; ow = TILE+4; oh = 11; }
+    else if(o.type==='rock_l'){ ox = o.tx*TILE-4; oy = (o.ty+1)*TILE-12; ow = TILE+8; oh = 12; }
+    else if(o.type==='barrel' || o.type==='signpost' || o.type==='lamp'){ ox = o.tx*TILE+2; oy = (o.ty+1)*TILE-10; ow = TILE-4; oh = 10; }
+    else if(o.type==='crop') continue;
+    else { ox = o.tx*TILE; oy = o.ty*TILE; ow = TILE; oh = TILE; }
+    if(hbX<ox+ow && hbX+hbW>ox && hbY<oy+oh && hbY+hbH>oy) return true;
+  }
+  // NPCs
+  for(const n of NPC_DATA){
+    if(n.loc!==Game.map) continue;
+    if(hbX<n.x-8+16 && hbX+hbW>n.x-8 && hbY<n.y-16+16 && hbY+hbH>n.y-16) return true;
+  }
+  // Animals
+  if(Game.map==='farm'){
+    for(const a of World.farm.animals){
+      if(Game.onHorse && a.mounted) continue;
+      if(hbX<a.x-8+16 && hbX+hbW>a.x-8 && hbY<a.y-14+14 && hbY+hbH>a.y-14) return true;
+    }
+  }
+  // Buildings
+  if(Game.map==='town' && World.town.buildings){
+    for(const b of World.town.buildings){
+      const bx = b.x*TILE+4, by = b.y*TILE+20, bw = b.w*TILE-8, bh = b.h*TILE-20;
+      if(hbX<bx+bw && hbX+hbW>bx && hbY<by+bh && hbY+hbH>by){
+        if(b.door){
+          const dx = b.door.x*TILE+2, dw = TILE-4;
+          if(hbX+hbW>dx && hbX<dx+dw && hbY+hbH>by+bh-TILE*1.5) return false;
+        }
+        return true;
+      }
+    }
+  }
+  if(Game.map==='farm'){
+    const ha = World.farm.houseArea;
+    const hL = ha.x*TILE+4, hT = ha.y*TILE+22, hW = ha.w*TILE-8, hH = ha.h*TILE-22;
+    const dX = World.farm.houseDoor.x*TILE+2, dW = TILE-4;
+    if(hbX<hL+hW && hbX+hbW>hL && hbY<hT+hH && hbY+hbH>hT){
+      if(hbX+hbW>dX && hbX<dX+dW && hbY+hbH>hT+hH-TILE*1.5) return false;
+      return true;
+    }
+    const sp = World.farm.shopPos;
+    const sL = sp.x*TILE, sT = sp.y*TILE+22, sW = 4*TILE, sH = 4*TILE-22;
+    const sd = World.farm.shopDoor;
+    if(hbX<sL+sW && hbX+hbW>sL && hbY<sT+sH && hbY+hbH>sT){
+      const dx = sd.x*TILE+2, dw = TILE-4;
+      if(hbX+hbW>dx && hbX<dx+dw && hbY+hbH>sT+sH-TILE*1.5) return false;
+      return true;
+    }
+    const st = World.farm.stablePos;
+    if(hbX<st.x*TILE+72 && hbX+hbW>st.x*TILE && hbY<st.y*TILE+56 && hbY+hbH>st.y*TILE+22) return true;
+    const cp = World.farm.carpenterPos;
+    if(hbX<cp.x*TILE+80 && hbX+hbW>cp.x*TILE && hbY<cp.y*TILE+64 && hbY+hbH>cp.y*TILE+22) return true;
+    const cm = World.farm.communityPos;
+    if(hbX<cm.x*TILE+112 && hbX+hbW>cm.x*TILE && hbY<cm.y*TILE+80 && hbY+hbH>cm.y*TILE+30) return true;
+  }
+  return false;
+}
+
+// ============================================================
+// DRAW
+// ============================================================
+function drawTile(t2,x,y){
+  const s = Game.season;
+  switch(t2){
+    case T_GRASS:{ const v = (x*7+y*13)%4; ctx.drawImage(S['t_grass_'+s+'_'+v], x, y); break; }
+    case T_PATH: ctx.drawImage(S['t_dirt'], x, y); break;
+    case T_WATER: ctx.drawImage(S['t_water'], x, y); break;
+    case T_DEEP: ctx.drawImage(S['t_deep'], x, y); break;
+    case T_TILL: ctx.drawImage(S['t_till'], x, y); break;
+    case T_TILL_WET: ctx.drawImage(S['t_till_wet'], x, y); break;
+    case T_FLOOR: ctx.drawImage(S['t_floor'], x, y); break;
+    case T_WALL: ctx.drawImage(S['t_wall'], x, y); break;
+    case T_SAND: ctx.drawImage(S['t_sand'], x, y); break;
+    case T_ROCK: ctx.drawImage(S['t_rock'], x, y); break;
+    case T_CAVE: ctx.drawImage(S['t_cave'], x, y); break;
+    case T_CU: ctx.drawImage(S['t_copper'], x, y); break;
+    case T_IR: ctx.drawImage(S['t_iron'], x, y); break;
+    case T_GO: ctx.drawImage(S['t_gold'], x, y); break;
+    case T_IRID: ctx.drawImage(S['t_iri'], x, y); break;
+  }
+}
+function drawObject(o){
+  let key = null, w = 16, h = 16;
+  if(o.type==='tree'){ key='tree_'+Game.season; w=32; h=48; }
+  else if(o.type==='pine'){ key='pine_'+Game.season; w=32; h=56; }
+  else if(o.type==='rock_s'){ key='rock_s'; w=16; h=14; }
+  else if(o.type==='rock_m'){ key='rock_m'; w=24; h=20; }
+  else if(o.type==='rock_l'){ key='rock_l'; w=32; h=26; }
+  else if(o.type==='crop'){ key='crop_'+o.cropType+'_'+o.stage; w=16; h=16; }
+  else if(o.type==='bed'){ key='bed'; w=32; h=48; }
+  else if(o.type==='flower_r'||o.type==='flower_y'||o.type==='flower_b'||o.type==='flower_w'||o.type==='mushroom'){ key=o.type; w=8; h=10; }
+  else if(S[o.type]){ key=o.type; w=S[o.type].width; h=S[o.type].height; }
+  if(!key || !S[key]) return;
+  const dx = Math.round(o.x - w/2);
+  const dy = Math.round(o.y - h);
+  ctx.drawImage(S[key], dx, dy);
+  if(o.hp!==undefined && o.maxHp!==undefined && o.hp<o.maxHp){
+    const bw = 20, bx = Math.round(o.x-bw/2), by = dy-5;
+    ctx.fillStyle = '#000'; ctx.fillRect(bx,by,bw,3);
+    ctx.fillStyle = '#c04030'; ctx.fillRect(bx+1,by+1,(bw-2)*(o.hp/o.maxHp),1);
+  }
+}
+function drawPlayer(){
+  if(Game.onHorse){
+    const hk = player.dir==='l' ? 'h_l_' : 'h_r_';
+    const hf = player.walkPhase % 2;
+    const hsp = S[hk+hf];
+    if(hsp) ctx.drawImage(hsp, Math.round(player.x-10), Math.round(player.y+2));
+  }
+  ctx.drawImage(S['shadow'], Math.round(player.x+6), Math.round(player.y+26));
+  let key;
+  if(player.action==='sleep') key = 'c_'+player.dir+'_sleep';
+  else if(player.action==='use') key = 'c_'+player.dir+'_use';
+  else if(player.walkPhase>0) key = 'c_'+player.dir+'_'+player.walkPhase;
+  else key = 'c_'+player.dir+'_idle';
+  const sp = S[key] || S['c_d_idle'];
+  if(player.invuln>0 && Math.floor(performance.now()/80)%2===0) ctx.globalAlpha = 0.5;
+  const yOff = Game.onHorse ? -8 : 0;
+  ctx.drawImage(sp, Math.round(player.x), Math.round(player.y+yOff));
+  ctx.globalAlpha = 1;
+}
+function drawAnimal(a){
+  let key;
+  if(a.growthStage<1){
+    const t2 = ANIMAL_TYPES[a.type];
+    key = t2.baby || (a.type==='cow' ? 'a_calf' : a.type==='pig' ? 'a_piglet' : 'a_chick');
+  }
+  else if(a.type==='chicken') key = 'a_chicken'+(a.frame?'_1':'');
+  else if(a.type==='duck') key = 'a_duck'+(a.frame?'_1':'');
+  else if(a.type==='rabbit') key = 'a_rabbit'+(a.frame?'_1':'');
+  else if(a.type==='pig') key = 'a_pig'+(a.frame?'_1':'');
+  else if(a.type==='cow') key = 'a_cow'+(a.frame?'_1':'');
+  else if(a.type==='goat') key = 'a_goat'+(a.frame?'_1':'');
+  else if(a.type==='horse'){ if(a.mounted) return; key = 'h_r_'+(a.frame?1:0); }
+  const sp = S[key]; if(!sp) return;
+  const w = sp.width, h = sp.height;
+  ctx.drawImage(S['shadow'], Math.round(a.x-w/2), Math.round(a.y-4));
+  if(a.dir<0){
+    ctx.save();
+    ctx.translate(Math.round(a.x)+w/2, 0); ctx.scale(-1,1); ctx.translate(-(Math.round(a.x)+w/2), 0);
+    ctx.drawImage(sp, Math.round(a.x-w/2), Math.round(a.y-h));
+    ctx.restore();
+  } else ctx.drawImage(sp, Math.round(a.x-w/2), Math.round(a.y-h));
+  if(a.produceReady && a.growthStage>=1 && a.type!=='horse'){
+    const bob = Math.sin(performance.now()/300)*1.5;
+    const t2 = ANIMAL_TYPES[a.type];
+    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#fff';
+    ctx.fillText(t2.icon, Math.round(a.x-5), Math.round(a.y-h-4+bob));
+  }
+}
+function drawNPC(n){
+  const idx = NPC_DATA.indexOf(n);
+  const sp = S['npc'+idx+'_'+n.dir] || S['npc'+idx+'_d'];
+  if(!sp) return;
+  ctx.drawImage(S['shadow'], Math.round(n.x-10), Math.round(n.y-4));
+  ctx.drawImage(sp, Math.round(n.x-16), Math.round(n.y-32));
+  if(n.hearts>0){
+    ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#ff6080';
+    ctx.fillText('♥'+Math.floor(n.hearts), Math.round(n.x-8), Math.round(n.y-36));
+  }
+  if(n.questGiven && !n.questDone){
+    const bob = Math.sin(performance.now()/300)*2;
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#ffd54a';
+    ctx.fillText('!', Math.round(n.x-2), Math.round(n.y-42+bob));
+  }
+}
+function drawMonster(m){
+  const sp = S[m.sprite] || S['m_slime'];
+  const w = sp.width, h = sp.height;
+  ctx.drawImage(S['shadow'], Math.round(m.x-w/2-2), Math.round(m.y-4));
+  if(m.hitTimer>0 && Math.floor(performance.now()/60)%2) ctx.globalAlpha = 0.5;
+  if(m.dir<0){
+    ctx.save();
+    ctx.translate(Math.round(m.x)+w/2, 0); ctx.scale(-1,1); ctx.translate(-(Math.round(m.x)+w/2), 0);
+    ctx.drawImage(sp, Math.round(m.x-w/2), Math.round(m.y-h));
+    ctx.restore();
+  } else ctx.drawImage(sp, Math.round(m.x-w/2), Math.round(m.y-h));
+  ctx.globalAlpha = 1;
+  if(m.hp<m.maxHp){
+    const bw = 20, bx = Math.round(m.x-bw/2), by = Math.round(m.y-h)-5;
+    ctx.fillStyle = '#000'; ctx.fillRect(bx,by,bw,3);
+    ctx.fillStyle = '#c04030'; ctx.fillRect(bx+1,by+1,(bw-2)*(m.hp/m.maxHp),1);
+  }
+}
+
+function drawWorld(){
+  const dn = Game.dayNight;
+  let skyTop = '#87ceeb', skyBot = '#c8e0f0';
+  if(Game.map==='mine'){ skyTop = '#1a1520'; skyBot = '#2a2028'; }
+  else if(Game.season===2){ skyTop = '#c89a60'; skyBot = '#e8c890'; }
+  else if(Game.season===3){ skyTop = '#a8b8c8'; skyBot = '#d8e0e8'; }
+  if(dn>0 && Game.map!=='mine'){
+    skyTop = 'rgb('+Math.round(135*(1-dn)+15*dn)+','+Math.round(206*(1-dn)+15*dn)+','+Math.round(235*(1-dn)+40*dn)+')';
+    skyBot = 'rgb('+Math.round(200*(1-dn)+10*dn)+','+Math.round(220*(1-dn)+10*dn)+','+Math.round(240*(1-dn)+25*dn)+')';
+  }
+  const grad = ctx.createLinearGradient(0,0,0,LH);
+  grad.addColorStop(0, skyTop); grad.addColorStop(1, skyBot);
+  ctx.fillStyle = grad; ctx.fillRect(0,0,LW,LH);
+
+  ctx.save();
+  ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+  const m = currentMap();
+  if(!m.tiles || !m.tiles.length){ ctx.restore(); return; }
+  const startX = Math.max(0, Math.floor(camera.x/TILE));
+  const endX = Math.min(m.w-1, Math.ceil((camera.x+LW)/TILE));
+  const startY = Math.max(0, Math.floor(camera.y/TILE));
+  const endY = Math.min(m.h-1, Math.ceil((camera.y+LH)/TILE));
+  for(let y=startY;y<=endY;y++) for(let x=startX;x<=endX;x++) drawTile(m.tiles[y][x], x*TILE, y*TILE);
+
+  if(Game.map==='mine' && m.ladder){
+    ctx.drawImage(S['ladder'], m.ladder.x*TILE, m.ladder.y*TILE);
+  }
+  if(Game.map==='farm'){
+    const ha = World.farm.houseArea;
+    ctx.drawImage(S['house'], ha.x*TILE, ha.y*TILE);
+    const sp = World.farm.shopPos;
+    ctx.drawImage(S['shop'], sp.x*TILE, sp.y*TILE);
+    const st = World.farm.stablePos;
+    ctx.drawImage(S['stable']||S['house'], st.x*TILE, st.y*TILE);
+    const cp = World.farm.carpenterPos;
+    ctx.drawImage(S['carpenter'], cp.x*TILE, cp.y*TILE);
+    const cm = World.farm.communityPos;
+    ctx.drawImage(S['community'], cm.x*TILE, cm.y*TILE);
+  }
+  if(Game.map==='town' && World.town.buildings){
+    for(const b of World.town.buildings){
+      const sp = S[b.type];
+      if(sp) ctx.drawImage(sp, b.x*TILE, b.y*TILE);
+    }
+  }
+
+  if(player.targetX!==null){
+    const tp = performance.now()/400;
+    const pulse = 0.6+0.4*Math.sin(tp*Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,220,80,'+(0.5+pulse*0.4)+')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(player.targetX, player.targetY, 4+pulse*2, 0, Math.PI*2); ctx.stroke();
+  }
+
+  const items = [];
+  if(m.objects) for(const o of m.objects) items.push({y:o.sortY||o.y, draw:()=>drawObject(o)});
+  if(Game.map==='farm') for(const a of World.farm.animals) if(!a.mounted) items.push({y:a.y, draw:()=>drawAnimal(a)});
+  for(const n of NPC_DATA) if(n.loc===Game.map) items.push({y:n.y, draw:()=>drawNPC(n)});
+  if(Game.map==='mine') for(const mon of Game.monsters) items.push({y:mon.y, draw:()=>drawMonster(mon)});
+  items.push({y:player.y+32, draw:drawPlayer});
+  items.sort((a,b)=>a.y-b.y);
+  for(const it of items) it.draw();
+
+  if(Game.fishing){
+    const px = player.x+16, py = player.y+16;
+    let fx = px, fy = py;
+    if(player.dir==='d') fy += TILE*2; else if(player.dir==='u') fy -= TILE*2;
+    else if(player.dir==='l') fx -= TILE*2; else fx += TILE*2;
+    ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px+6, py-6); ctx.lineTo(fx, fy); ctx.stroke();
+    const bob = Math.sin(performance.now()/200)*1.5;
+    ctx.drawImage(S['bobber'], fx-3, fy-3+bob);
+  }
+  for(const p of Game.particles){
+    ctx.globalAlpha = p.life/p.max;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x-1, p.y-1, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  if(dn>0){ ctx.fillStyle = 'rgba(10,10,30,'+(dn*0.5)+')'; ctx.fillRect(0,0,LW,LH); }
+  if(Game.weather==='rain' || Game.weather==='storm'){
+    ctx.fillStyle = 'rgba(80,80,120,0.15)'; ctx.fillRect(0,0,LW,LH);
+    for(let i=0;i<60;i++){
+      const rx = (i*53+performance.now()*0.3)%LW;
+      const ry = (i*37+performance.now()*0.6)%LH;
+      ctx.fillStyle = 'rgba(180,200,255,0.5)';
+      ctx.fillRect(rx, ry, 1, 4);
+    }
+  }
+  if(Game.weather==='snow'){
+    ctx.fillStyle = 'rgba(220,230,240,0.1)'; ctx.fillRect(0,0,LW,LH);
+    for(let i=0;i<40;i++){
+      const rx = (i*53+performance.now()*0.05)%LW;
+      const ry = (i*37+performance.now()*0.15)%LH;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(rx, ry, 2, 2);
+    }
+  }
+  if(Game.weather==='fog'){ ctx.fillStyle = 'rgba(220,220,230,0.25)'; ctx.fillRect(0,0,LW,LH); }
+}
+
+function drawHUD(){
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(6,6,110,44);
+  ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 1; ctx.strokeRect(6.5,6.5,109,43);
+  ctx.fillStyle = '#e8c060'; ctx.font = 'bold 9px monospace';
+  const h = Math.floor(Game.time/60)%24, mn = Math.floor(Game.time%60);
+  ctx.fillText(t('day')+' '+Game.day+' • '+t(SEASONS[Game.season]), 10, 18);
+  ctx.fillText((h<10?'0':'')+h+':'+(mn<10?'0':'')+mn+'  '+Game.seasonDay+'/7', 10, 30);
+  ctx.fillStyle = '#fff'; ctx.fillText('🪙 '+Game.gold, 10, 44);
+
+  const locNames = {farm:'🌾 '+t('farm'), town:'🏘 '+t('town'), beach:'🏖 '+t('beach'),
+    forest:'🌲 '+t('forest'), mountain:'🏔 '+t('mountain'), mine:'⛏ '+t('mine')+' '+World.mine.depth};
+  ctx.fillStyle = 'rgba(20,15,10,0.85)';
+  const lw = ctx.measureText(locNames[Game.map]).width+16;
+  ctx.fillRect(6,54,lw,16);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(6.5,54.5,lw-1,15);
+  ctx.fillStyle = '#e8c060'; ctx.fillText(locNames[Game.map], 10, 65);
+
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(6,74,80,16);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(6.5,74.5,79,15);
+  const wi = {sunny:'☀️ '+t('sunny'), rain:'🌧 '+t('rain'), storm:'⛈ '+t('storm'), snow:'❄️ '+t('snow'), fog:'🌫 '+t('fog')}[Game.weather];
+  ctx.fillStyle = '#e8c060'; ctx.fillText(wi, 10, 85);
+
+  // HP
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(LW-124,6,118,16);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(LW-123.5,6.5,117,15);
+  const hP = Game.hp/Game.maxHp;
+  ctx.fillStyle = '#3a1010'; ctx.fillRect(LW-121,9,112,10);
+  ctx.fillStyle = '#d04040'; ctx.fillRect(LW-121,9,112*hP,10);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace';
+  ctx.fillText('❤ '+Math.round(Game.hp), LW-117, 18);
+
+  // Energy
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(LW-124,26,118,16);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(LW-123.5,26.5,117,15);
+  const eP = Game.energy/Game.maxEnergy;
+  ctx.fillStyle = '#3a2a10'; ctx.fillRect(LW-121,29,112,10);
+  ctx.fillStyle = eP>0.5 ? '#6ac04a' : eP>0.25 ? '#e0c040' : '#c04040';
+  ctx.fillRect(LW-121,29,112*eP,10);
+  ctx.fillStyle = '#fff'; ctx.fillText('⚡ '+Math.round(Game.energy), LW-117, 38);
+
+  // Weapon info
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(LW-124,46,118,16);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(LW-123.5,46.5,117,15);
+  ctx.fillStyle = '#e8c060'; ctx.fillText('⚔ '+WEAPONS[Game.weaponLevel].name, LW-121, 57);
+
+  // Buttons I/M/Q
+  const btns = [['I','inv',LW-124],['M','map',LW-84],['Q','quest',LW-44]];
+  for(const [label,action,x] of btns){
+    ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(x,64,38,16);
+    ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(x+0.5,64.5,37,15);
+    ctx.fillStyle = '#e8c060'; ctx.font = 'bold 10px monospace';
+    ctx.fillText(label, x+14, 75);
+  }
+
+  // Hotbar
+  const hbW = 7*24+4;
+  const hbX = (LW-hbW)/2;
+  const hbY = LH-32;
+  ctx.fillStyle = 'rgba(20,15,10,0.9)'; ctx.fillRect(hbX, hbY, hbW, 28);
+  ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 2;
+  ctx.strokeRect(hbX+1, hbY+1, hbW-2, 26); ctx.lineWidth = 1;
+  for(let i=0;i<7;i++){
+    const x = hbX+2+i*24, y = hbY+2;
+    ctx.fillStyle = i===Game.selected ? 'rgba(232,192,96,0.35)' : 'rgba(0,0,0,0.4)';
+    ctx.fillRect(x, y, 20, 20);
+    if(i===Game.selected){ ctx.strokeStyle = '#e8c060'; ctx.lineWidth = 2; ctx.strokeRect(x,y,20,20); ctx.lineWidth = 1; }
+    if(S['i_'+Game.hotbar[i]]) ctx.drawImage(S['i_'+Game.hotbar[i]], x+2, y+2);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = 'bold 7px monospace';
+    ctx.fillText(String(i+1), x+1, y+8);
+  }
+  ctx.font = 'bold 9px monospace';
+  const tn = toolName(Game.hotbar[Game.selected]);
+  const tw = ctx.measureText(tn).width+12;
+  ctx.fillStyle = 'rgba(20,15,10,0.85)'; ctx.fillRect(hbX, hbY-14, tw, 12);
+  ctx.strokeStyle = '#8a5a2a'; ctx.strokeRect(hbX+0.5, hbY-13.5, tw-1, 11);
+  ctx.fillStyle = '#e8c060'; ctx.fillText(tn, hbX+6, hbY-5);
+
+  // Toast
+  if(Game.toastTimer>0){
+    const alpha = Math.min(1, Game.toastTimer/300);
+    ctx.font = 'bold 11px monospace';
+    const tw2 = ctx.measureText(Game.toast).width+22;
+    ctx.fillStyle = 'rgba(20,15,10,'+(0.9*alpha)+')';
+    ctx.fillRect((LW-tw2)/2, 60, tw2, 18);
+    ctx.strokeStyle = 'rgba(138,90,42,'+alpha+')';
+    ctx.strokeRect((LW-tw2)/2+0.5, 60.5, tw2-1, 17);
+    ctx.fillStyle = 'rgba(232,192,96,'+alpha+')';
+    ctx.textAlign = 'center';
+    ctx.fillText(Game.toast, LW/2, 73);
+    ctx.textAlign = 'left';
+  }
+
+  // Quests panel
+  const ql = $('questList');
+  if(Game.activeQuests.length){
+    let html = '<div class="q">📜 '+t('quests')+':</div>';
+    for(const q of Game.activeQuests){
+      const npc = NPC_DATA.find(n=>n.id===q.npcId);
+      const have = Game.inv[q.item]||0;
+      html += '<div>• '+(npc?npc.name:'?')+': '+q.item+' '+have+'/'+q.count+'</div>';
+    }
+    ql.innerHTML = html; ql.classList.add('show');
+  } else ql.classList.remove('show');
+}
+
+// ============================================================
+// LOOP
+// ============================================================
+function loop(now){
+  let dt = now-lastTime;
+  lastTime = now;
+  if(dt>100) dt = 100;
+  if(dt<0) dt = 0;
+  try{
+    update(dt);
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,CW,CH);
+    ctx.setTransform(SCALE,0,0,SCALE,0,0);
+    drawWorld();
+    if(!Game.paused) drawHUD();
+  }catch(e){ console.error(e); }
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// WORLD POPULATION
+// ============================================================
+function populateWorld(){
+  const w = World.farm;
+  w.objects = [];
+  const occ = new Set();
+  // Reserve building areas
+  for(let y=w.houseArea.y-1;y<w.houseArea.y+w.houseArea.h+1;y++)
+    for(let x=w.houseArea.x-1;x<w.houseArea.x+w.houseArea.w+1;x++) occ.add(x+','+y);
+  for(let y=w.shopPos.y-1;y<w.shopPos.y+5;y++)
+    for(let x=w.shopPos.x-1;x<w.shopPos.x+5;x++) occ.add(x+','+y);
+  for(let y=w.penArea.y-1;y<w.penArea.y+w.penArea.h+1;y++)
+    for(let x=w.penArea.x-1;x<w.penArea.x+w.penArea.w+1;x++) occ.add(x+','+y);
+  for(let y=w.stablePos.y-1;y<w.stablePos.y+5;y++)
+    for(let x=w.stablePos.x-1;x<w.stablePos.x+5;x++) occ.add(x+','+y);
+  for(let y=w.carpenterPos.y-1;y<w.carpenterPos.y+5;y++)
+    for(let x=w.carpenterPos.x-1;x<w.carpenterPos.x+6;x++) occ.add(x+','+y);
+  for(let y=w.communityPos.y-1;y<w.communityPos.y+6;y++)
+    for(let x=w.communityPos.x-1;x<w.communityPos.x+8;x++) occ.add(x+','+y);
+  for(let y=15;y<25;y++) for(let x=18;x<30;x++) occ.add(x+','+y);
+
+  let id = 0;
+  // Trees on farm
+  for(let t2=0;t2<60;t2++){
+    const tx = 2+Math.floor(Math.random()*46);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ.has(tx+','+ty)) continue;
+    if(w.tiles[ty][tx]!==T_GRASS) continue;
+    let nw = false;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(w.tiles[ty+dy] && w.tiles[ty+dy][tx+dx]===T_WATER){ nw = true; break; }
+    }
+    if(nw) continue;
+    const isPine = Math.random()<0.25;
+    w.objects.push({ id:'t'+(id++), type:isPine?'pine':'tree',
+      x:tx*TILE+TILE/2, y:(ty+1)*TILE, tx, ty,
+      hp:isPine?5:4, maxHp:isPine?5:4, solid:true, sortY:(ty+1)*TILE });
+    occ.add(tx+','+ty);
+  }
+  // Rocks
+  for(let t2=0;t2<30;t2++){
+    const tx = 2+Math.floor(Math.random()*46);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ.has(tx+','+ty)) continue;
+    if(w.tiles[ty][tx]!==T_GRASS) continue;
+    const kind = Math.random()<0.5 ? 'rock_s' : (Math.random()<0.6 ? 'rock_m' : 'rock_l');
+    const hp = kind==='rock_s' ? 2 : kind==='rock_m' ? 3 : 4;
+    w.objects.push({ id:'r'+(id++), type:kind,
+      x:tx*TILE+TILE/2, y:(ty+1)*TILE, tx, ty,
+      hp, maxHp:hp, solid:true, sortY:(ty+1)*TILE });
+    occ.add(tx+','+ty);
+  }
+  // Farm decor
+  const decorTypes = ['flower_r','flower_y','flower_b','flower_w','mushroom','bush','rock_small','wood_stump','barrel'];
+  for(let t2=0;t2<80;t2++){
+    const tx = 2+Math.floor(Math.random()*46);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ.has(tx+','+ty)) continue;
+    if(w.tiles[ty][tx]!==T_GRASS) continue;
+    const type = decorTypes[Math.floor(Math.random()*decorTypes.length)];
+    w.objects.push({ id:'d'+(id++), type, x:tx*TILE+TILE/2, y:(ty+1)*TILE, tx, ty, solid:false, sortY:(ty+1)*TILE });
+    occ.add(tx+','+ty);
+  }
+
+  // Town decor
+  const town = World.town;
+  town.objects = [];
+  const occ2 = new Set();
+  for(const b of town.buildings){
+    for(let y=b.y-1;y<b.y+b.h+1;y++) for(let x=b.x-1;x<b.x+b.w+1;x++) occ2.add(x+','+y);
+  }
+  for(let x=0;x<50;x++) occ2.add(x+',20');
+  for(let y=0;y<40;y++) occ2.add('25,'+y);
+  for(let y=18;y<24;y++) for(let x=22;x<30;x++) occ2.add(x+','+y);
+  for(let t2=0;t2<40;t2++){
+    const tx = 2+Math.floor(Math.random()*46);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ2.has(tx+','+ty)) continue;
+    if(town.tiles[ty][tx]!==T_GRASS) continue;
+    const dt = ['flower_r','flower_y','flower_b','flower_w','bush','rock_small'];
+    const type = dt[Math.floor(Math.random()*dt.length)];
+    town.objects.push({ id:'td'+(id++), type, x:tx*TILE+TILE/2, y:(ty+1)*TILE, tx, ty, solid:false, sortY:(ty+1)*TILE });
+    occ2.add(tx+','+ty);
+  }
+  // Lamps along main road
+  for(let x=4;x<46;x+=8){
+    if(town.tiles[19][x]===T_PATH || town.tiles[20][x]===T_PATH){
+      town.objects.push({ id:'tl'+(id++), type:'lamp', x:x*TILE+8, y:19*TILE+16, tx:x, ty:19, solid:false, sortY:19*TILE+16 });
+    }
+  }
+  // Benches in plaza
+  for(let i=0;i<6;i++){
+    const x = 21+i*2, y = 18;
+    if(town.tiles[y][x]===T_FLOOR){
+      town.objects.push({ id:'tb'+(id++), type:'bench', x:x*TILE+8, y:(y+1)*TILE, tx:x, ty:y, solid:false, sortY:(y+1)*TILE });
+    }
+  }
+
+  // Forest
+  const f = World.forest;
+  f.objects = [];
+  const occ3 = new Set();
+  for(let y=18;y<24;y++) occ3.add('0,'+y);
+  for(let y=18;y<24;y++) occ3.add('39,'+y);
+  for(let x=18;x<24;x++) occ3.add(x+',0');
+  for(let t2=0;t2<150;t2++){
+    const tx = 2+Math.floor(Math.random()*36);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ3.has(tx+','+ty)) continue;
+    if(f.tiles[ty][tx]!==T_GRASS) continue;
+    const isPine = Math.random()<0.35;
+    f.objects.push({ id:'ft'+(id++), type:isPine?'pine':'tree',
+      x:tx*TILE+8, y:(ty+1)*TILE, tx, ty,
+      hp:isPine?5:4, maxHp:isPine?5:4, solid:true, sortY:(ty+1)*TILE });
+    occ3.add(tx+','+ty);
+  }
+  for(let t2=0;t2<40;t2++){
+    const tx = 2+Math.floor(Math.random()*36);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(occ3.has(tx+','+ty)) continue;
+    if(f.tiles[ty][tx]!==T_GRASS) continue;
+    const dt = ['mushroom','flower_b','flower_w','bush','rock_small'];
+    const type = dt[Math.floor(Math.random()*dt.length)];
+    f.objects.push({ id:'fd'+(id++), type, x:tx*TILE+8, y:(ty+1)*TILE, tx, ty, solid:false, sortY:(ty+1)*TILE });
+    occ3.add(tx+','+ty);
+  }
+
+  // Mountain
+  const mt = World.mountain;
+  mt.objects = [];
+  for(let t2=0;t2<60;t2++){
+    const tx = 2+Math.floor(Math.random()*36);
+    const ty = 2+Math.floor(Math.random()*36);
+    if(mt.tiles[ty][tx]!==T_GRASS) continue;
+    const kind = Math.random()<0.4 ? 'rock_s' : (Math.random()<0.5 ? 'rock_m' : 'rock_l');
+    const hp = kind==='rock_s' ? 2 : kind==='rock_m' ? 3 : 4;
+    mt.objects.push({ id:'mr'+(id++), type:kind,
+      x:tx*TILE+8, y:(ty+1)*TILE, tx, ty,
+      hp, maxHp:hp, solid:true, sortY:(ty+1)*TILE });
+  }
+
+  // Beach
+  const b = World.beach;
+  b.objects = [];
+  for(let t2=0;t2<30;t2++){
+    const tx = 2+Math.floor(Math.random()*46);
+    const ty = 2+Math.floor(Math.random()*16);
+    if(b.tiles[ty][tx]!==T_SAND) continue;
+    const dt = ['rock_small','flower_w','mushroom'];
+    const type = dt[Math.floor(Math.random()*dt.length)];
+    b.objects.push({ id:'bd'+(id++), type, x:tx*TILE+8, y:(ty+1)*TILE, tx, ty, solid:false, sortY:(ty+1)*TILE });
+  }
+}
+populateWorld();
+
+// ============================================================
+// SPAWN ANIMAL
+// ============================================================
+function spawnAnimal(type){
+  const pa = World.farm.penArea;
+  const tx = pa.x+1+Math.floor(Math.random()*(pa.w-2));
+  const ty = pa.y+1+Math.floor(Math.random()*(pa.h-2));
+  World.farm.animals.push({
+    type, x:tx*TILE+8, y:ty*TILE+16, tx:tx*TILE+8, ty:ty*TILE+16,
+    dir:1, frame:0, frameTimer:0, moveTimer:1500+Math.random()*2000,
+    produceReady:false, produceTimer:ANIMAL_TYPES[type].time,
+    growthStage:0, growTimer:0,
+  });
+  toast(ANIMAL_TYPES[type].name+' purchased!');
+}
+
+// ============================================================
+// MENUS
+// ============================================================
+function newGame(){
+  try{ localStorage.removeItem('pixelfarm_save'); }catch(e){}
+  Game.time = 6*60; Game.day = 1; Game.season = 0; Game.seasonDay = 1; Game.weather = 'sunny';
+  Game.energy = 100; Game.maxEnergy = 100; Game.hp = 100; Game.maxHp = 100; Game.gold = 80;
+  Game.inv = { wood:0, stone:0, seeds:10, fish:0, food:3,
+    wheat:0, carrot:0, tomato:0, potato:0, corn:0, pumpkin:0,
+    egg:0, milk:0, goat_milk:0, wool:0, truffle:0, feather:0,
+    copper:0, iron:0, gold_ore:0, iri:0, coal:0, slime:0, bone:0, potion:0 };
+  Game.fishCaught = {};
+  Game.selected = 0;
+  Game.map = 'farm';
+  Game.sleeping = false; Game.paused = false;
+  Game.fishing = null; Game.particles = []; Game.shopOpen = false;
+  Game.dayNight = 0; Game.panelOpen = null;
+  Game.weaponLevel = 0; Game.armorLevel = 0;
+  Game.activeQuests = []; Game.completedQuests = 0;
+  Game.kills = {};
+  Game.monsters = [];
+  Game.onHorse = false; Game.stuckTimer = 0; Game.invuln = 0;
+  Game.bundles = BUNDLES.map(b=>({...b}));
+
+  player.x = 24*TILE+8; player.y = 19*TILE;
+  player.targetX = null; player.targetY = null;
+  player.actionTarget = null; player.action = null;
+  player.dir = 'd'; player.walkPhase = 0;
+
+  World.farm.tiles = makeFarm();
+  World.town.tiles = makeTown();
+  World.beach.tiles = makeBeach();
+  World.forest.tiles = makeForest();
+  World.mountain.tiles = makeMountain();
+  World.farm.animals = [];
+  World.town.objects = [];
+  World.beach.objects = [];
+  World.forest.objects = [];
+  World.mountain.objects = [];
+  populateWorld();
+
+  for(const n of NPC_DATA){
+    n.hearts = 0; n.questDone = false; n.questGiven = false; n.giftedToday = false;
+    n.x = n.hx*TILE+8; n.y = n.hy*TILE+16;
+    n.wanderTarget = {x:n.x, y:n.y};
+  }
+  camera.x = player.x-LW/2;
+  camera.y = player.y-LH/2;
+
+  Snd.init(); Snd.resume(); Snd.startMusic();
+  $('menuMain').classList.add('hidden');
+  $('menuPause').classList.add('hidden');
+  $('menuHelp').classList.add('hidden');
+}
+function pauseGame(){
+  if(Game.paused || Game.sleeping) return;
+  Game.paused = true;
+  Snd.stopAll();
+  $('menuPause').classList.remove('hidden');
+  Snd.play('click');
+}
+function resumeGame(){
+  Game.paused = false;
+  $('menuPause').classList.add('hidden');
+  $('menuHelp').classList.add('hidden');
+  Snd.unpause();
+}
+
+$('btnNew').onclick = ()=>{ Snd.init(); Snd.resume(); Snd.play('click'); newGame(); };
+$('btnContinue').onclick = ()=>{
+  Snd.init(); Snd.resume();
+  if(loadGame()){
+    Snd.play('click');
+    $('menuMain').classList.add('hidden');
+    Snd.startMusic();
+  } else toast(t('noSave'));
+};
+$('btnSettings').onclick = ()=>{ Snd.init(); Snd.resume(); Snd.play('click'); openSettingsPanel(); };
+$('btnHelp').onclick = ()=>{ Snd.play('click'); $('menuMain').classList.add('hidden'); $('menuHelp').classList.remove('hidden'); };
+$('btnHelpBack').onclick = ()=>{ Snd.play('click'); $('menuHelp').classList.add('hidden'); $('menuMain').classList.remove('hidden'); };
+$('btnResume').onclick = resumeGame;
+$('btnSave2').onclick = ()=>{ Snd.play('click'); saveGame(); };
+$('btnSettings2').onclick = ()=>{ Snd.play('click'); openSettingsPanel(); };
+$('btnToMain').onclick = ()=>{
+  Snd.play('click');
+  Game.paused = false;
+  Game.panelOpen = null;
+  Snd.stopAll();
+  $('menuPause').classList.add('hidden');
+  $('menuMain').classList.remove('hidden');
+};
+
+if(hasSave()) $('btnContinue').style.display = 'block';
+else $('btnContinue').style.display = 'none';
+
+lastTime = performance.now();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
