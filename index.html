@@ -9,7 +9,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a1a0a;font-family:'Segoe UI',sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none;position:fixed}
 #canvasWrapper{position:fixed;inset:0;display:flex;justify-content:center;align-items:center;background:#0a1a0a;overflow:hidden}
-#gameCanvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;box-shadow:0 0 40px rgba(0,0,0,.9);cursor:crosshair}
+#gameCanvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;box-shadow:0 0 40px rgba(0,0,0,.9)}
 #touchControls{position:fixed;inset:0;pointer-events:none;z-index:50;display:none}
 #touchControls.active{display:block}
 .tc-btn{position:absolute;pointer-events:auto;background:rgba(142,201,111,.35);border:2px solid rgba(142,201,111,.75);border-radius:50%;display:flex;justify-content:center;align-items:center;color:#fff;font-weight:bold;user-select:none;transition:all .06s;touch-action:none}
@@ -47,10 +47,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a1a0a;font-family:
 #hud{position:fixed;top:10px;left:10px;background:rgba(0,0,0,.6);padding:8px 12px;border-radius:6px;border:1px solid #3a3a3a;font-size:11px;line-height:1.5;pointer-events:none;display:none;z-index:40}
 #hud b{color:#ffd54a}
 #errorBar{position:fixed;top:0;left:0;right:0;background:#800;color:#fff;padding:6px 10px;font-family:monospace;font-size:10px;z-index:9999;display:none;word-break:break-all}
-#assetStatus{position:fixed;top:10px;right:10px;background:rgba(0,0,0,.9);padding:10px 14px;border-radius:6px;font-size:11px;color:#8ec96f;z-index:45;pointer-events:auto;display:none;max-width:280px;line-height:1.5;border:1px solid #8ec96f;white-space:pre-line;cursor:pointer}
-#assetStatus.err{color:#ffb0b0;border-color:#7a3a3a}
-#assetStatus.warn{color:#ffd54a;border-color:#8a7a3a}
-#assetStatus .close{display:block;text-align:right;color:#666;font-size:9px;margin-top:4px}
+#assetStatus{position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,.85);padding:8px 12px;border-radius:6px;font-size:11px;color:#8ec96f;z-index:45;pointer-events:none;display:none;max-width:280px;line-height:1.5;border:1px solid #8ec96f;white-space:pre-line}
 @media (max-width:700px) and (orientation:portrait){
   .tc-dpad-up{bottom:220px;left:80px;width:65px;height:65px}
   .tc-dpad-down{bottom:80px;left:80px;width:65px;height:65px}
@@ -104,71 +101,115 @@ window.addEventListener('error',e=>{errorBar.style.display='block';
   setTimeout(()=>errorBar.style.display='none',6000);});
 
 // ============================================================
-// ГЕНЕРАЦИЯ СПРАЙТОВ (fallback)
+// СПРАЙТЫ РИСУЮТСЯ КОДОМ — НАДЁЖНО И БЕЗ ВНЕШНИХ ФАЙЛОВ
 // ============================================================
 const C={hatTop:'#d4a04a',hatBrim:'#a87830',hatBand:'#6a3a1a',skin:'#f5c898',skinD:'#d4a878',
-  hair:'#5a3a1a',eye:'#1a0d05',shirt:'#3a6ab0',shirtD:'#2a4a80',pants:'#6a4a2a',boot:'#2a1a0a',
+  hair:'#5a3a1a',eye:'#1a0d05',shirt:'#3a6ab0',shirtD:'#2a4a80',pants:'#6a4a2a',pantsD:'#4a3018',boot:'#2a1a0a',
   leafDark:'#2a5a1a',leafMid:'#3a7a2a',leafHi:'#5aa83a',trunk:'#5a3a1a',trunkD:'#3a2a0a',
   rock:'#7a7a80',rockHi:'#a0a0a8',rockLo:'#4a4a50',dirt:'#8a6a3a',dirtD:'#6a4a2a',dirtHi:'#a8804a',
   grass:'#4a8c3a',grassD:'#3a7028',grassHi:'#6ab04a',water:'#3a6ac0',waterHi:'#5a8ad0',
   waterD:'#2a4aa0',crop:'#5aa03a',cropD:'#3a7028',wood:'#8a5a30',woodD:'#5a3a1a'};
 function rect(c,x,y,w,h,col){c.fillStyle=col;c.fillRect(x,y,w,h);}
-function genChar(c,ox,oy,dir,frame,anim){
-  if(anim==='sleep'){rect(c,ox+4,oy+18,24,8,C.shirt);rect(c,ox+4,oy+18,24,2,C.shirtD);
+
+function drawChar(c,ox,oy,dir,frame,anim){
+  if(anim==='sleep'){
+    rect(c,ox+4,oy+18,24,8,C.shirt);rect(c,ox+4,oy+18,24,2,C.shirtD);
     rect(c,ox+2,oy+20,4,4,C.skin);rect(c,ox+1,oy+19,5,3,C.hatBrim);
     rect(c,ox+2,oy+18,3,2,C.hatTop);rect(c,ox+26,oy+22,4,2,C.boot);
     const zx=ox+22,zy=oy+8;rect(c,zx,zy,5,1,'#fff');rect(c,zx+4,zy,1,3,'#fff');
-    rect(c,zx,zy+2,5,1,'#fff');if(frame===1){rect(c,zx+5,zy-4,4,1,'#a0d0ff');
-      rect(c,zx+8,zy-4,1,3,'#a0d0ff');rect(c,zx+5,zy-2,4,1,'#a0d0ff');}return;}
+    rect(c,zx,zy+2,5,1,'#fff');
+    if(frame===1){rect(c,zx+5,zy-4,4,1,'#a0d0ff');rect(c,zx+8,zy-4,1,3,'#a0d0ff');rect(c,zx+5,zy-2,4,1,'#a0d0ff');}
+    return;
+  }
   let legOff=0;if(anim==='walk'){const s=[0,1,0,-1];legOff=s[frame%4];}
   const isAtk=anim==='attack',ap=isAtk?frame:0;
-  if(dir==='U'){rect(c,ox+7,oy+2,18,2,C.hatTop);rect(c,ox+5,oy+4,22,3,C.hatBrim);
-    rect(c,ox+7,oy+7,18,2,C.hatTop);rect(c,ox+7,oy+9,18,1,C.hatBand);rect(c,ox+9,oy+10,14,7,C.hair);}
-  else{rect(c,ox+7,oy+2,18,2,C.hatTop);rect(c,ox+5,oy+4,22,3,C.hatBrim);
+  // Голова и шляпа
+  if(dir==='U'){
+    rect(c,ox+7,oy+2,18,2,C.hatTop);rect(c,ox+5,oy+4,22,3,C.hatBrim);
     rect(c,ox+7,oy+7,18,2,C.hatTop);rect(c,ox+7,oy+9,18,1,C.hatBand);
-    if(dir==='D'){rect(c,ox+9,oy+10,14,7,C.skin);rect(c,ox+11,oy+12,2,2,C.eye);
-      rect(c,ox+19,oy+12,2,2,C.eye);rect(c,ox+14,oy+15,4,1,C.skinD);}
-    else if(dir==='L'){rect(c,ox+9,oy+10,13,7,C.skin);rect(c,ox+10,oy+12,2,2,C.eye);rect(c,ox+9,oy+14,1,2,C.skinD);}
-    else{rect(c,ox+10,oy+10,13,7,C.skin);rect(c,ox+20,oy+12,2,2,C.eye);rect(c,ox+22,oy+14,1,2,C.skinD);}}
+    rect(c,ox+9,oy+10,14,7,C.hair);
+  } else {
+    rect(c,ox+7,oy+2,18,2,C.hatTop);rect(c,ox+5,oy+4,22,3,C.hatBrim);
+    rect(c,ox+7,oy+7,18,2,C.hatTop);rect(c,ox+7,oy+9,18,1,C.hatBand);
+    if(dir==='D'){
+      rect(c,ox+9,oy+10,14,7,C.skin);
+      rect(c,ox+11,oy+12,2,2,C.eye);rect(c,ox+19,oy+12,2,2,C.eye);
+      rect(c,ox+14,oy+15,4,1,C.skinD);
+    } else if(dir==='L'){
+      rect(c,ox+9,oy+10,13,7,C.skin);
+      rect(c,ox+10,oy+12,2,2,C.eye);rect(c,ox+9,oy+14,1,2,C.skinD);
+    } else {
+      rect(c,ox+10,oy+10,13,7,C.skin);
+      rect(c,ox+20,oy+12,2,2,C.eye);rect(c,ox+22,oy+14,1,2,C.skinD);
+    }
+  }
+  // Туловище
   const by=oy+17;rect(c,ox+10,by,12,8,C.shirt);rect(c,ox+10,by+7,12,1,C.shirtD);
-  if(dir==='L'){rect(c,ox+10,by+1,3,6,C.shirt);rect(c,ox+10,by+6,3,2,C.skin);
+  // Руки
+  if(dir==='L'){
+    rect(c,ox+10,by+1,3,6,C.shirt);rect(c,ox+10,by+6,3,2,C.skin);
     if(isAtk&&ap>0&&ap<4){rect(c,ox+6,by+2,4,2,C.skin);rect(c,ox+2,by,4,4,C.wood);rect(c,ox+1,by-1,6,2,C.rockHi);}
-    rect(c,ox+19,by+1,2,6,C.shirtD);}
-  else if(dir==='R'){rect(c,ox+19,by+1,3,6,C.shirt);rect(c,ox+19,by+6,3,2,C.skin);
+    rect(c,ox+19,by+1,2,6,C.shirtD);
+  } else if(dir==='R'){
+    rect(c,ox+19,by+1,3,6,C.shirt);rect(c,ox+19,by+6,3,2,C.skin);
     if(isAtk&&ap>0&&ap<4){rect(c,ox+22,by+2,4,2,C.skin);rect(c,ox+26,by,4,4,C.wood);rect(c,ox+25,by-1,6,2,C.rockHi);}
-    rect(c,ox+11,by+1,2,6,C.shirtD);}
-  else{rect(c,ox+8,by+1,2,6,C.shirt);rect(c,ox+22,by+1,2,6,C.shirt);
+    rect(c,ox+11,by+1,2,6,C.shirtD);
+  } else {
+    rect(c,ox+8,by+1,2,6,C.shirt);rect(c,ox+22,by+1,2,6,C.shirt);
     rect(c,ox+8,by+6,2,2,C.skin);rect(c,ox+22,by+6,2,2,C.skin);
-    if(isAtk&&ap>0&&ap<4){rect(c,ox+22,by+4,8,3,C.skin);rect(c,ox+28,by+2,4,6,C.wood);rect(c,ox+28,by,4,3,C.rockHi);}}
+    if(isAtk&&ap>0&&ap<4){rect(c,ox+22,by+4,8,3,C.skin);rect(c,ox+28,by+2,4,6,C.wood);rect(c,ox+28,by,4,3,C.rockHi);}
+  }
+  // Ноги
   const ly=oy+25;
-  if(dir==='L'||dir==='R'){rect(c,ox+11,ly+Math.max(0,legOff),4,5-Math.max(0,legOff),C.pants);
+  if(dir==='L'||dir==='R'){
+    rect(c,ox+11,ly+Math.max(0,legOff),4,5-Math.max(0,legOff),C.pants);
     rect(c,ox+17,ly+Math.max(0,-legOff),4,5-Math.max(0,-legOff),C.pants);
-    rect(c,ox+10,ly+5+Math.max(0,legOff)-1,5,2,C.boot);rect(c,ox+16,ly+5+Math.max(0,-legOff)-1,5,2,C.boot);}
-  else{rect(c,ox+11,ly,4,5,C.pants);rect(c,ox+17,ly+Math.max(0,legOff),4,5-Math.max(0,legOff),C.pants);
-    rect(c,ox+11,ly+5,4,2,C.boot);rect(c,ox+17,ly+5+Math.max(0,legOff),4,2,C.boot);}
+    rect(c,ox+10,ly+5+Math.max(0,legOff)-1,5,2,C.boot);
+    rect(c,ox+16,ly+5+Math.max(0,-legOff)-1,5,2,C.boot);
+  } else {
+    rect(c,ox+11,ly,4,5,C.pants);
+    rect(c,ox+17,ly+Math.max(0,legOff),4,5-Math.max(0,legOff),C.pants);
+    rect(c,ox+11,ly+5,4,2,C.boot);
+    rect(c,ox+17,ly+5+Math.max(0,legOff),4,2,C.boot);
+  }
+  // Лейка при useItem
   if(anim==='useItem'&&frame>0&&frame<4){
     if(dir==='D'||dir==='U'){rect(c,ox+22,oy+20,6,6,'#4aa83a');rect(c,ox+24,oy+18,2,2,'#4aa83a');}
     else if(dir==='L'){rect(c,ox+2,oy+20,6,6,'#4aa83a');}
-    else{rect(c,ox+24,oy+20,6,6,'#4aa83a');}}
+    else{rect(c,ox+24,oy+20,6,6,'#4aa83a');}
+  }
 }
-function makeGenChar(){
+
+function makeCharSheet(){
   const cv=document.createElement('canvas');cv.width=288;cv.height=320;
   const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
-  const rows=[{y:0,frames:2,a:'idle',d:['D','D']},{y:32,frames:4,a:'walk',d:['D','D','D','D']},
-    {y:64,frames:4,a:'walk',d:['U','U','U','U']},{y:96,frames:4,a:'walk',d:['L','L','L','L']},
-    {y:128,frames:4,a:'walk',d:['R','R','R','R']},{y:160,frames:4,a:'attack',d:['D','D','D','D']},
-    {y:192,frames:4,a:'death',d:['D','D','D','D']},{y:224,frames:2,a:'sleep',d:['D','D']},
-    {y:256,frames:4,a:'useItem',d:['D','D','D','D']}];
-  rows.forEach(r=>{for(let i=0;i<r.frames;i++){const ox=i*32,oy=r.y;
-    if(r.a==='death'){if(i===0)genChar(c,ox,oy,'D',0,'idle');
-      else if(i===1){rect(c,ox+8,oy+18,16,10,C.shirt);rect(c,ox+10,oy+12,12,6,C.skin);rect(c,ox+9,oy+9,14,4,C.hatBrim);}
-      else if(i===2){rect(c,ox+4,oy+22,24,6,C.shirt);rect(c,ox+8,oy+18,10,5,C.skin);rect(c,ox+8,oy+15,12,4,C.hatBrim);}
-      else{rect(c,ox+3,oy+20,26,6,C.shirt);rect(c,ox+3,oy+20,26,2,C.shirtD);
-        rect(c,ox+1,oy+22,5,4,C.skin);rect(c,ox+1,oy+20,5,3,C.hatBrim);
-        rect(c,ox+25,oy+23,5,3,C.boot);rect(c,ox+18,oy+17,8,2,'#a02020');}}
-    else genChar(c,ox,oy,r.d[i],i,r.a);}});
+  const rows=[
+    {y:0,frames:2,anim:'idle',dirs:['D','D']},
+    {y:32,frames:4,anim:'walk',dirs:['D','D','D','D']},
+    {y:64,frames:4,anim:'walk',dirs:['U','U','U','U']},
+    {y:96,frames:4,anim:'walk',dirs:['L','L','L','L']},
+    {y:128,frames:4,anim:'walk',dirs:['R','R','R','R']},
+    {y:160,frames:4,anim:'attack',dirs:['D','D','D','D']},
+    {y:192,frames:4,anim:'death',dirs:['D','D','D','D']},
+    {y:224,frames:2,anim:'sleep',dirs:['D','D']},
+    {y:256,frames:4,anim:'useItem',dirs:['D','D','D','D']}
+  ];
+  rows.forEach(r=>{
+    for(let i=0;i<r.frames;i++){
+      const ox=i*32,oy=r.y;
+      if(r.anim==='death'){
+        if(i===0)drawChar(c,ox,oy,'D',0,'idle');
+        else if(i===1){rect(c,ox+8,oy+18,16,10,C.shirt);rect(c,ox+10,oy+12,12,6,C.skin);rect(c,ox+9,oy+9,14,4,C.hatBrim);}
+        else if(i===2){rect(c,ox+4,oy+22,24,6,C.shirt);rect(c,ox+8,oy+18,10,5,C.skin);rect(c,ox+8,oy+15,12,4,C.hatBrim);}
+        else{rect(c,ox+3,oy+20,26,6,C.shirt);rect(c,ox+3,oy+20,26,2,C.shirtD);
+          rect(c,ox+1,oy+22,5,4,C.skin);rect(c,ox+1,oy+20,5,3,C.hatBrim);
+          rect(c,ox+25,oy+23,5,3,C.boot);rect(c,ox+18,oy+17,8,2,'#a02020');}
+      } else drawChar(c,ox,oy,r.dirs[i],i,r.anim);
+    }
+  });
   return cv;
 }
+
 function genGrass(c,x,y,v){rect(c,x,y,32,32,C.grass);
   if(v===0){rect(c,x+5,y+8,3,2,C.grassD);rect(c,x+18,y+12,4,2,C.grassD);rect(c,x+10,y+22,5,2,C.grassHi);rect(c,x+22,y+25,3,2,C.grassD);}
   else if(v===1){for(let i=0;i<12;i++){const gx=x+((i*7)%28)+2,gy=y+((i*11)%28)+2;rect(c,gx,gy,2,3,i%2?C.grassD:C.grassHi);}}
@@ -181,7 +222,8 @@ function genFence(c,x,y){rect(c,x,y,32,32,C.grass);rect(c,x+2,y+8,3,20,C.wood);r
 function genBarrel(c,x,y){rect(c,x,y,32,32,C.grass);rect(c,x+8,y+8,16,20,C.wood);rect(c,x+8,y+12,16,2,C.woodD);rect(c,x+8,y+22,16,2,C.woodD);rect(c,x+10,y+10,3,16,'#a06a3a');}
 function genCrop(c,x,y,stage){rect(c,x,y,32,32,C.dirt);rect(c,x,y,32,2,C.dirtD);rect(c,x+2,y+6,28,2,C.dirtD);rect(c,x+2,y+16,28,2,C.dirtD);rect(c,x+2,y+26,28,2,C.dirtD);for(let i=0;i<3;i++)for(let j=0;j<3;j++){const px=x+5+j*9,py=y+6+i*10;if(stage===0){rect(c,px,py-2,2,4,C.crop);rect(c,px-2,py-1,2,2,C.cropD);rect(c,px+2,py-1,2,2,C.cropD);}else{rect(c,px-1,py-6,4,8,C.crop);rect(c,px-4,py-4,3,3,C.cropD);rect(c,px+2,py-4,3,3,C.cropD);rect(c,px,py-8,2,3,C.cropD);}}}
 function genWater(c,x,y,corner){rect(c,x,y,32,32,C.water);rect(c,x,y,32,2,C.waterD);rect(c,x+4,y+8,6,1,C.waterHi);rect(c,x+18,y+14,8,1,C.waterHi);rect(c,x+6,y+22,5,1,C.waterHi);if(corner===0){rect(c,x+20,y+6,7,4,C.crop);rect(c,x+22,y+7,3,2,C.cropD);rect(c,x+23,y+6,1,1,'#ff8aa8');}}
-function makeGenTiles(){
+
+function makeTilesSheet(){
   const cv=document.createElement('canvas');cv.width=256;cv.height=192;
   const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
   const O=0,Y=0;
@@ -199,215 +241,10 @@ function makeGenTiles(){
   genWater(c,O+4*32,Y+5*32,0);genWater(c,O+5*32,Y+5*32,1);genWater(c,O+6*32,Y+5*32,0);genWater(c,O+7*32,Y+5*32,0);
   return cv;
 }
-const genCharImg=makeGenChar();
-const genTilesImg=makeGenTiles();
 
-// ============================================================
-// АВТООПРЕДЕЛЕНИЕ СЕТКИ
-// ============================================================
-// Для персонажа: ищем "плотные" строки, где >50% пикселей имеют насыщенный цвет.
-// Для тайлов: то же самое, но пропускаем верхние 8% (там заголовок).
-function detectGrid(img, opts){
-  opts = opts || {};
-  const skipTopFrac = opts.skipTop !== undefined ? opts.skipTop : 0.03;
-  const skipLeftFrac = opts.skipLeft !== undefined ? opts.skipLeft : 0.01;
-  const densityThreshold = opts.density !== undefined ? opts.density : 0.35;
-
-  const W=img.naturalWidth, H=img.naturalHeight;
-  let data;
-  try{
-    const cv=document.createElement('canvas');cv.width=W;cv.height=H;
-    const c=cv.getContext('2d',{willReadFrequently:true});
-    c.drawImage(img,0,0);
-    data=c.getImageData(0,0,W,H).data;
-  }catch(e){return null;}
-
-  // Насыщенный пиксель
-  function isColored(x,y){
-    const i=(y*W+x)*4;
-    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
-    if(a<100)return false;
-    const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
-    if((mx-mn)<40)return false;      // серое — не считаем
-    if(mx<70)return false;            // слишком тёмное
-    return true;
-  }
-
-  // Профиль покрытия по строкам
-  const rowCov=new Float32Array(H);
-  for(let y=0;y<H;y++){
-    let cnt=0;
-    for(let x=0;x<W;x++) if(isColored(x,y)) cnt++;
-    rowCov[y]=cnt/W;
-  }
-  // Профиль покрытия по столбцам (полный)
-  const colCov=new Float32Array(W);
-  for(let x=0;x<W;x++){
-    let cnt=0;
-    for(let y=0;y<H;y++) if(isColored(x,y)) cnt++;
-    colCov[x]=cnt/H;
-  }
-
-  const skipTop=Math.floor(H*skipTopFrac);
-  const skipLeft=Math.floor(W*skipLeftFrac);
-
-  // Верхняя граница: первая строка с плотностью > threshold
-  let topY=-1;
-  for(let y=skipTop;y<H;y++){
-    if(rowCov[y]>densityThreshold){topY=y;break;}
-  }
-  if(topY<0)topY=skipTop;
-
-  // Левая граница: смотрим только ниже topY, ищем столбец с плотностью > threshold
-  let leftX=-1;
-  const yFrom=topY, yTo=Math.min(topY+Math.floor((H-topY)*0.6), H);
-  const colCov2=new Float32Array(W);
-  for(let x=0;x<W;x++){
-    let cnt=0;
-    for(let y=yFrom;y<yTo;y++) if(isColored(x,y)) cnt++;
-    colCov2[x]=cnt/(yTo-yFrom);
-  }
-  for(let x=skipLeft;x<W;x++){
-    if(colCov2[x]>densityThreshold){leftX=x;break;}
-  }
-  if(leftX<0)leftX=skipLeft;
-
-  // Размер ячейки: ищем первую "пропасть" по Y и X
-  // Пропасть = ряд/столбец с плотностью < 0.08
-  function firstGapLen(arr, start, len, minGap){
-    for(let i=start;i<len;i++){
-      if(arr[i]<0.06){
-        let j=i;
-        while(j<len && arr[j]<0.06) j++;
-        if(j-i>=minGap) return {start:i, end:j};
-      }
-    }
-    return null;
-  }
-
-  let cellY=64, cellX=64;
-
-  // По Y: ищем пропасть после topY + 10 (чтобы не спутать с краем ячейки)
-  const yGap=firstGapLen(rowCov, topY+10, H, 4);
-  if(yGap){
-    // Первый ряд идёт от topY до yGap.start
-    const candidate=yGap.start-topY;
-    if(candidate>=16 && candidate<=256) cellY=candidate;
-  }
-
-  // По X: ищем пропасть после leftX + 10
-  const xGap=firstGapLen(colCov2, leftX+10, W, 4);
-  if(xGap){
-    const candidate=xGap.start-leftX;
-    if(candidate>=16 && candidate<=256) cellX=candidate;
-  }
-
-  let cell=Math.round((cellX+cellY)/2);
-  // Округляем до кратного 8
-  cell=Math.round(cell/8)*8;
-  if(cell<16)cell=32;
-  if(cell>256)cell=64;
-
-  return {ox:leftX, oy:topY, cell:cell};
-}
-
-// ============================================================
-// ЗАГРУЗКА КАРТИНОК
-// ============================================================
-let userCharImg=null, userTilesImg=null;
-let charGrid=null, tilesGrid=null;
-
-const CHAR_NAMES=['assets/character.png','character.png','sprite.png','assets.png'];
-const TILES_NAMES=['tileset.png','assets/tileset.png','tiles.png','assets.png'];
-
-function showStatus(cls,text){
-  const el=$('assetStatus');
-  el.className=cls;
-  el.innerHTML=text+'<span class="close">[ нажмите чтобы скрыть ]</span>';
-  el.style.display='block';
-  el.onclick=()=>{el.style.display='none';};
-  // Автоскрытие через 25 секунд
-  clearTimeout(showStatus._t);
-  showStatus._t=setTimeout(()=>{el.style.display='none';},25000);
-}
-
-function loadImgList(list,idx,cb){
-  if(idx>=list.length){cb(null,null);return;}
-  const name=list[idx];
-  const img=new Image();
-  let done=false;
-  const to=setTimeout(()=>{if(done)return;done=true;loadImgList(list,idx+1,cb);},1500);
-  img.onload=()=>{
-    if(done)return;done=true;clearTimeout(to);
-    if(img.naturalWidth<80||img.naturalHeight<80){loadImgList(list,idx+1,cb);return;}
-    cb(img,name);
-  };
-  img.onerror=()=>{if(done)return;done=true;clearTimeout(to);loadImgList(list,idx+1,cb);};
-  img.src=name+'?v='+Date.now();
-}
-
-let loadedCount=0;
-const totalToLoad=2;
-function onImgLoaded(){
-  loadedCount++;
-  if(loadedCount<totalToLoad)return;
-
-  // Кросс-подстройка: если оба файла есть, и cell у char надёжнее —
-  // используем cell из char для tiles
-  if(userCharImg && charGrid && userTilesImg && tilesGrid){
-    if(tilesGrid.cell !== charGrid.cell){
-      console.log('Tiles cell override:',charGrid.cell,'(was',tilesGrid.cell,')');
-      tilesGrid.cell=charGrid.cell;
-    }
-  }
-
-  let cls='', msg='';
-  if(userCharImg && userTilesImg){
-    cls='';
-    msg='✓ Ассеты загружены\n';
-    msg+='👤 Персонаж: '+userCharImg.naturalWidth+'×'+userCharImg.naturalHeight+'\n';
-    msg+='   offset: '+charGrid.ox+','+charGrid.oy+'  cell: '+charGrid.cell+'\n';
-    msg+='🌿 Тайлы: '+userTilesImg.naturalWidth+'×'+userTilesImg.naturalHeight+'\n';
-    msg+='   offset: '+tilesGrid.ox+','+tilesGrid.oy+'  cell: '+tilesGrid.cell;
-  } else if(userCharImg){
-    cls='warn';
-    msg='⚠ Только персонаж загружен\nТайлы: встроенные';
-  } else if(userTilesImg){
-    cls='warn';
-    msg='⚠ Только тайлы загружены\nПерсонаж: встроенный';
-  } else {
-    cls='err';
-    msg='✗ Файлы не найдены\nИспользуются встроенные спрайты';
-  }
-  showStatus(cls,msg);
-}
-
-loadImgList(CHAR_NAMES,0,(img,name)=>{
-  if(img){
-    userCharImg=img;
-    // Строгие параметры для персонажа: точная сетка
-    charGrid=detectGrid(img,{skipTop:0.05, skipLeft:0.05, density:0.35});
-    if(!charGrid)charGrid={ox:0,oy:0,cell:64};
-    console.log('CHAR grid:',charGrid);
-  }
-  onImgLoaded();
-});
-loadImgList(TILES_NAMES,0,(img,name)=>{
-  if(img){
-    userTilesImg=img;
-    // Для тайлов: пропускаем больше сверху (там заголовок), сетка
-    // определяется по-другому, но cell потом всё равно возьмём от персонажа
-    tilesGrid=detectGrid(img,{skipTop:0.08, skipLeft:0.01, density:0.45});
-    if(!tilesGrid)tilesGrid={ox:0,oy:0,cell:64};
-    console.log('TILES grid:',tilesGrid);
-  }
-  onImgLoaded();
-});
-
-function getCharImg(){ return (userCharImg && charGrid) ? userCharImg : genCharImg; }
-function getCharGrid(){ return (userCharImg && charGrid) ? charGrid : {ox:0,oy:0,cell:32}; }
-function getTilesImg(){ return (userTilesImg && tilesGrid) ? userTilesImg : genTilesImg; }
-function getTilesGrid(){ return (userTilesImg && tilesGrid) ? tilesGrid : {ox:0,oy:0,cell:32}; }
+// Единственные спрайты, которые использует игра
+const charSheet = makeCharSheet();
+const tilesSheet = makeTilesSheet();
 
 // ============================================================
 // АУДИО
@@ -504,7 +341,7 @@ let mapData=DEFAULT_MAP.map(r=>r.slice());
 
 function createPlayer(){return{x:320,y:240,width:32,height:32,speed:1.8,vx:0,vy:0,
   state:'idle',direction:'down',frameIndex:0,frameTimer:0,isMoving:false,lastStepFrame:-1,
-  targetX:null, targetY:null};}
+  targetX:null,targetY:null};}
 let player=createPlayer();
 const camera={x:0,y:0};
 const GS={MAIN:'main',PLAYING:'playing',PAUSED:'paused'};
@@ -571,7 +408,6 @@ function triggerAction(action){if(gameState!==GS.PLAYING)return;
   if(action==='attack'){player.state='attack';player.frameIndex=0;player.frameTimer=0;Audio.play('attack');}
   else if(action==='useItem'){player.state='useItem';player.frameIndex=0;player.frameTimer=0;Audio.play('item');}
   else if(action==='sleep'){if(player.state!=='sleep'){player.state='sleep';player.frameIndex=0;player.frameTimer=0;Audio.play('sleep');}}}
-
 window.addEventListener('keydown',(e)=>{const k=e.key.toLowerCase();keys[k]=true;
   if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();
   if(k==='escape'){if(gameState===GS.PLAYING)pauseGame();else if(gameState===GS.PAUSED)resumeGame();return;}
@@ -583,14 +419,13 @@ function screenToWorld(clientX,clientY){
   const rect=canvas.getBoundingClientRect();
   const sx=(clientX-rect.left)*(canvas.width/rect.width);
   const sy=(clientY-rect.top)*(canvas.height/rect.height);
-  return {x:sx/SCALE+camera.x, y:sy/SCALE+camera.y};
+  return {x:sx/SCALE+camera.x,y:sy/SCALE+camera.y};
 }
 let pointerDown=false;
 function onPointerDown(e){
   if(gameState!==GS.PLAYING)return;
   if(e.target!==canvas)return;
-  e.preventDefault();
-  pointerDown=true;
+  e.preventDefault();pointerDown=true;
   const p=screenToWorld(e.clientX,e.clientY);
   player.targetX=p.x;player.targetY=p.y;
 }
@@ -651,10 +486,10 @@ function update(dt){
     return;}
 
   let dx=0,dy=0;
-  if(keys['w']||keys['arrowup'])    {dy=-1;player.direction='up';}
-  if(keys['s']||keys['arrowdown'])  {dy=1;player.direction='down';}
-  if(keys['a']||keys['arrowleft'])  {dx=-1;player.direction='left';}
-  if(keys['d']||keys['arrowright']) {dx=1;player.direction='right';}
+  if(keys['w']||keys['arrowup']){dy=-1;player.direction='up';}
+  if(keys['s']||keys['arrowdown']){dy=1;player.direction='down';}
+  if(keys['a']||keys['arrowleft']){dx=-1;player.direction='left';}
+  if(keys['d']||keys['arrowright']){dx=1;player.direction='right';}
   if(dx!==0||dy!==0){player.targetX=null;player.targetY=null;}
 
   if(dx===0&&dy===0&&player.targetX!==null){
@@ -662,11 +497,9 @@ function update(dt){
     const tdx=player.targetX-cx,tdy=player.targetY-cy;
     const dist=Math.sqrt(tdx*tdx+tdy*tdy);
     if(dist<6){player.targetX=null;player.targetY=null;}
-    else{
-      dx=tdx/dist;dy=tdy/dist;
+    else{dx=tdx/dist;dy=tdy/dist;
       if(Math.abs(tdx)>Math.abs(tdy))player.direction=tdx>0?'right':'left';
-      else player.direction=tdy>0?'down':'up';
-    }
+      else player.direction=tdy>0?'down':'up';}
   }
   if(dx!==0&&dy!==0&&(dx*dx+dy*dy)>1.1){dx*=0.7071;dy*=0.7071;}
 
@@ -678,8 +511,7 @@ function update(dt){
     if(!checkCollision(nx,player.y))player.x=nx;else blockedX=true;}
   if(player.vy!==0){const ny=player.y+player.vy;
     if(!checkCollision(player.x,ny))player.y=ny;else blockedY=true;}
-  if(player.targetX!==null&&blockedX&&blockedY){
-    player.targetX=null;player.targetY=null;}
+  if(player.targetX!==null&&blockedX&&blockedY){player.targetX=null;player.targetY=null;}
 
   let animState='idle';
   if(player.isMoving)animState='walk'+player.direction.charAt(0).toUpperCase()+player.direction.slice(1);
@@ -701,7 +533,7 @@ function draw(){
   ctx.setTransform(SCALE,0,0,SCALE,0,0);
   ctx.save();ctx.translate(-Math.round(camera.x),-Math.round(camera.y));
 
-  const tilesImg=getTilesImg();const tg=getTilesGrid();
+  // Тайлы
   const startCol=Math.max(0,Math.floor(camera.x/32));
   const endCol=Math.min(MAP_COLS-1,Math.ceil((camera.x+WIDTH)/32));
   const startRow=Math.max(0,Math.floor(camera.y/32));
@@ -709,36 +541,31 @@ function draw(){
   for(let row=startRow;row<=endRow;row++)for(let col=startCol;col<=endCol;col++){
     const idx=mapData[row][col];const dx=col*32,dy=row*32;
     const tCol=idx%TILESET_COLS,tRow=Math.floor(idx/TILESET_COLS);
-    const sx=tg.ox+tCol*tg.cell,sy=tg.oy+tRow*tg.cell;
-    try{ctx.drawImage(tilesImg,sx,sy,tg.cell,tg.cell,dx,dy,32,32);}
-    catch(e){ctx.fillStyle='#4a8c3a';ctx.fillRect(dx,dy,32,32);}
+    const sx=tCol*32, sy=tRow*32;
+    ctx.drawImage(tilesSheet,sx,sy,32,32,dx,dy,32,32);
   }
 
+  // Маркер цели
   if(player.targetX!==null){
     const t=performance.now()/400;
     const pulse=0.6+0.4*Math.sin(t*Math.PI*2);
     const r=5+pulse*3;
     ctx.strokeStyle='rgba(255,220,80,'+(0.4+pulse*0.4)+')';
     ctx.lineWidth=1.5;
-    ctx.beginPath();
-    ctx.arc(player.targetX,player.targetY,r+3,0,Math.PI*2);
-    ctx.stroke();
+    ctx.beginPath();ctx.arc(player.targetX,player.targetY,r+3,0,Math.PI*2);ctx.stroke();
     ctx.fillStyle='rgba(255,220,80,'+(0.7+pulse*0.3)+')';
-    ctx.beginPath();
-    ctx.arc(player.targetX,player.targetY,2.5,0,Math.PI*2);
-    ctx.fill();
+    ctx.beginPath();ctx.arc(player.targetX,player.targetY,2.5,0,Math.PI*2);ctx.fill();
   }
 
+  // Тень
   ctx.fillStyle='rgba(0,0,0,0.25)';ctx.beginPath();
   ctx.ellipse(player.x+16,player.y+30,12,4,0,0,Math.PI*2);ctx.fill();
 
-  const charImg=getCharImg();const cg=getCharGrid();
+  // Игрок
   const cfg=animConfig[player.state]||animConfig.idle;
-  const sx=cg.ox+player.frameIndex*cg.cell;
-  const sy=cg.oy+Math.floor(cfg.y/32)*cg.cell;
-  try{ctx.drawImage(charImg,sx,sy,cg.cell,cg.cell,
-    Math.round(player.x),Math.round(player.y),32,32);}
-  catch(e){ctx.fillStyle='#ffd54a';ctx.fillRect(player.x+8,player.y+6,16,12);}
+  const sx=player.frameIndex*32, sy=cfg.y;
+  ctx.drawImage(charSheet,sx,sy,32,32,
+    Math.round(player.x),Math.round(player.y),32,32);
 
   ctx.restore();
   if(gameState===GS.PLAYING){ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(8,HEIGHT-22,180,16);
