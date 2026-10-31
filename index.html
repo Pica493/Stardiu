@@ -279,6 +279,11 @@
     #touchButtons { grid-template-columns:repeat(2, 58px); }
     .tbtn { width:58px; height:58px; font-size:19px; }
   }
+
+@media (max-height: 640px) {
+  #menu { overflow-y: auto !important; align-items: flex-start !important; padding: 20px !important; }
+}
+ 
 </style>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -2231,3 +2236,418 @@ function continueGame() {
   player = new Player(world);
   player.mode = save.mode || 'survival';
   player.pos.set(save.playerPos
+
+  player.pos.set(save.playerPos.x, save.playerPos.y, save.playerPos.z);
+  player.yaw = save.playerYaw ?? 0;
+  player.pitch = save.playerPitch ?? 0;
+  player.hp = save.playerHP ?? player.maxHp;
+  player.air = save.playerAir ?? player.maxAir;
+  hotbar = Array.isArray(save.hotbar) ? save.hotbar : [null,null,null,null,null,null,null,null,null];
+  backpack = Array.isArray(save.backpack) ? save.backpack : [];
+  selectedSlot = save.selectedSlot ?? 0;
+  timeOfDay = save.timeOfDay ?? 0.3;
+  player.model = buildPlayerModel();
+  player.model.visible = false;
+  scene.add(player.model);
+  updateHotbarUI(); updateStatsUI();
+  enterGame();
+}
+
+/* =========================================================
+   ВХОД В ИГРУ / ПРИМЕНЕНИЕ НАСТРОЕК
+========================================================= */
+function enterGame() {
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('settings').classList.add('hidden');
+  document.getElementById('inventory').classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  if (isTouch) document.getElementById('touchUI').classList.remove('hidden');
+  else document.getElementById('touchUI').classList.add('hidden');
+  state = 'playing';
+  paused = false;
+  lastFrame = performance.now();
+  applySettingsToWorld();
+  initAudio();
+  if (!isTouch) canvas.requestPointerLock();
+}
+
+function applySettingsToWorld() {
+  if (!camera) return;
+  camera.fov = settings.fov;
+  camera.updateProjectionMatrix();
+  const pr = settings.quality === 'low' ? 1
+            : settings.quality === 'medium' ? Math.min(1.5, window.devicePixelRatio)
+            : Math.min(2, window.devicePixelRatio);
+  renderer.setPixelRatio(pr);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  const far = settings.renderDist * CHUNK_W * 1.2 + 40;
+  scene.fog.near = Math.max(20, settings.renderDist * CHUNK_W * 0.6);
+  scene.fog.far = far;
+  camera.far = far + 60;
+  camera.updateProjectionMatrix();
+  document.getElementById('debug').style.display = settings.showDebug ? 'block' : 'none';
+  if (musicGain) musicGain.gain.value = settings.musicVol;
+  if (sfxGain) sfxGain.gain.value = settings.sfxVol;
+}
+
+/* =========================================================
+   ПЕРЕНАЗНАЧЕНИЕ КЛАВИШ
+========================================================= */
+function renderKeybinds() {
+  const list = document.getElementById('keybindList');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const key of Object.keys(KEYBIND_LABELS)) {
+    const row = document.createElement('div');
+    row.className = 'keybind-row';
+    const label = document.createElement('span');
+    label.textContent = KEYBIND_LABELS[key];
+    row.appendChild(label);
+    const btn = document.createElement('button');
+    btn.className = 'key-btn' + (rebindingKey === key ? ' wait' : '');
+    btn.textContent = rebindingKey === key ? 'нажмите...' : codeToLabel(settings.keybinds[key]);
+    btn.addEventListener('click', () => {
+      rebindingKey = (rebindingKey === key) ? null : key;
+      renderKeybinds();
+    });
+    row.appendChild(btn);
+    list.appendChild(row);
+  }
+}
+
+/* =========================================================
+   ОБРАБОТКА ESCAPE (закрытие оверлеев)
+========================================================= */
+function handleEscape() {
+  if (state === 'menu') {
+    const settingsEl = document.getElementById('settings');
+    if (!settingsEl.classList.contains('hidden')) {
+      settingsEl.classList.add('hidden');
+      document.getElementById('menu').classList.remove('hidden');
+    }
+    return;
+  }
+  if (state === 'playing' && paused) {
+    const inv = document.getElementById('inventory');
+    const menu = document.getElementById('menu');
+    const settingsEl = document.getElementById('settings');
+    if (!inv.classList.contains('hidden')) {
+      closeInventory();
+    } else if (!settingsEl.classList.contains('hidden')) {
+      settingsEl.classList.add('hidden');
+      document.getElementById('menu').classList.remove('hidden');
+    } else if (!menu.classList.contains('hidden')) {
+      document.getElementById('menu').classList.add('hidden');
+      paused = false;
+      if (!isTouch) canvas.requestPointerLock();
+    }
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Escape' && !rebindingKey) {
+    if (state === 'menu') {
+      const s = document.getElementById('settings');
+      if (!s.classList.contains('hidden')) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        handleEscape();
+      }
+    } else if (state === 'playing' && paused) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      handleEscape();
+    }
+  }
+}, true);
+
+/* =========================================================
+   ИНИЦИАЛИЗАЦИЯ ВВОДА И АТЛАСА
+========================================================= */
+genAtlas();
+setupKeyboard();
+setupMouse(canvas);
+setupTouch(canvas);
+
+/* =========================================================
+   МЕНЮ: ОБРАБОТЧИКИ КНОПОК
+========================================================= */
+let menuMode = 'survival';
+
+document.querySelectorAll('#modeSeg .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#modeSeg .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    menuMode = btn.dataset.mode;
+  });
+});
+
+document.getElementById('btnNew').addEventListener('click', () => {
+  startGame(menuMode);
+});
+
+document.getElementById('btnContinue').addEventListener('click', () => {
+  if (state === 'playing' && paused) {
+    document.getElementById('menu').classList.add('hidden');
+    paused = false;
+    if (!isTouch) canvas.requestPointerLock();
+    return;
+  }
+  continueGame();
+});
+
+document.getElementById('btnSettings').addEventListener('click', () => {
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('settings').classList.remove('hidden');
+  syncSettingsUI();
+  renderKeybinds();
+});
+
+document.getElementById('btnSettingsBack').addEventListener('click', () => {
+  document.getElementById('settings').classList.add('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  saveSettings();
+});
+
+/* =========================================================
+   НАСТРОЙКИ: СЛАЙДЕРЫ
+========================================================= */
+function bindSlider(id, valId, key, fmt, onChange) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(valId);
+  if (!el) return;
+  const update = () => {
+    const v = parseFloat(el.value);
+    settings[key] = v;
+    valEl.textContent = fmt(v);
+    if (onChange) onChange(v);
+    saveSettings();
+  };
+  el.addEventListener('input', update);
+}
+
+bindSlider('rdSlider', 'rdVal', 'renderDist', v => v, () => applySettingsToWorld());
+bindSlider('fovSlider', 'fovVal', 'fov', v => v, () => { camera.fov = settings.fov; camera.updateProjectionMatrix(); });
+bindSlider('sensSlider', 'sensVal', 'sensitivity', v => v.toFixed(1));
+bindSlider('tLookSlider', 'tLookVal', 'touchLook', v => v.toFixed(1));
+bindSlider('musSlider', 'musVal', 'musicVol', v => v.toFixed(0) + '%', v => {
+  settings.musicVol = v / 100;
+  if (musicGain) musicGain.gain.value = settings.musicVol;
+});
+bindSlider('sfxSlider', 'sfxVal', 'sfxVol', v => v.toFixed(0) + '%', v => {
+  settings.sfxVol = v / 100;
+  if (sfxGain) sfxGain.gain.value = settings.sfxVol;
+});
+bindSlider('brightSlider', 'brightVal', 'brightness', v => v.toFixed(2));
+bindSlider('daySlider', 'dayVal', 'dayLength', v => v.toFixed(0));
+
+/* =========================================================
+   НАСТРОЙКИ: СЕГМЕНТЫ
+========================================================= */
+document.querySelectorAll('#qualitySeg .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#qualitySeg .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.quality = btn.dataset.q;
+    applySettingsToWorld();
+    saveSettings();
+  });
+});
+document.querySelectorAll('#invertSeg .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#invertSeg .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.invertY = btn.dataset.inv === '1';
+    saveSettings();
+  });
+});
+document.querySelectorAll('#debugSeg .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#debugSeg .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    settings.showDebug = btn.dataset.d === '1';
+    document.getElementById('debug').style.display = settings.showDebug ? 'block' : 'none';
+    saveSettings();
+  });
+});
+
+/* =========================================================
+   СБРОС КЛАВИШ
+========================================================= */
+document.getElementById('btnResetKeys').addEventListener('click', () => {
+  settings.keybinds = { ...DEFAULT_KEYBINDS };
+  renderKeybinds();
+  saveSettings();
+  showToast('Клавиши сброшены');
+});
+
+/* =========================================================
+   ЗАКРЫТИЕ ИНВЕНТАРЯ
+========================================================= */
+document.getElementById('btnInvClose').addEventListener('click', () => closeInventory());
+
+/* =========================================================
+   СИНХРОНИЗАЦИЯ UI НАСТРОЕК
+========================================================= */
+function syncSettingsUI() {
+  const set = (id, val, valId, fmt) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+    if (valId) {
+      const v = document.getElementById(valId);
+      if (v) v.textContent = fmt ? fmt(val) : val;
+    }
+  };
+  set('rdSlider', settings.renderDist, 'rdVal');
+  set('fovSlider', settings.fov, 'fovVal');
+  set('sensSlider', settings.sensitivity, 'sensVal', v => v.toFixed(1));
+  set('tLookSlider', settings.touchLook, 'tLookVal', v => v.toFixed(1));
+  set('musSlider', settings.musicVol * 100, 'musVal', v => v.toFixed(0) + '%');
+  set('sfxSlider', settings.sfxVol * 100, 'sfxVal', v => v.toFixed(0) + '%');
+  set('brightSlider', settings.brightness, 'brightVal', v => v.toFixed(2));
+  set('daySlider', settings.dayLength, 'dayVal', v => v.toFixed(0));
+
+  document.querySelectorAll('#qualitySeg .btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.q === settings.quality));
+  document.querySelectorAll('#invertSeg .btn').forEach(b =>
+    b.classList.toggle('active', (b.dataset.inv === '1') === settings.invertY));
+  document.querySelectorAll('#debugSeg .btn').forEach(b =>
+    b.classList.toggle('active', (b.dataset.d === '1') === settings.showDebug));
+}
+
+/* =========================================================
+   АНИМАЦИЯ ФОНА МЕНЮ
+========================================================= */
+const menuCanvas = document.getElementById('menuCanvas');
+const menuCtx = menuCanvas.getContext('2d');
+const menuCubes = Array.from({ length: 18 }, (_, i) => ({
+  x: Math.random(), y: Math.random(),
+  size: 12 + Math.random() * 22,
+  speed: 0.02 + Math.random() * 0.06,
+  phase: Math.random() * Math.PI * 2,
+  hue: 200 + Math.random() * 60
+}));
+
+function resizeMenuCanvas() {
+  const r = menuCanvas.getBoundingClientRect();
+  menuCanvas.width = r.width;
+  menuCanvas.height = r.height;
+}
+window.addEventListener('resize', resizeMenuCanvas);
+resizeMenuCanvas();
+
+function animateMenu() {
+  requestAnimationFrame(animateMenu);
+  if (state !== 'menu') return;
+  const W = menuCanvas.width, H = menuCanvas.height;
+  menuCtx.clearRect(0, 0, W, H);
+  const t = performance.now() / 1000;
+  for (const c of menuCubes) {
+    const cx = (c.x * W + Math.cos(t * c.speed + c.phase) * 60) % (W + 100) - 50;
+    const cy = (c.y * H + Math.sin(t * c.speed * 1.3 + c.phase) * 40) % (H + 100) - 50;
+    menuCtx.save();
+    menuCtx.translate(cx, cy);
+    menuCtx.rotate(t * 0.3 + c.phase);
+    const g = menuCtx.createLinearGradient(-c.size/2, -c.size/2, c.size/2, c.size/2);
+    g.addColorStop(0, `hsla(${c.hue}, 90%, 70%, 0.7)`);
+    g.addColorStop(1, `hsla(${c.hue + 40}, 90%, 50%, 0.1)`);
+    menuCtx.fillStyle = g;
+    menuCtx.fillRect(-c.size/2, -c.size/2, c.size, c.size);
+    menuCtx.strokeStyle = `hsla(${c.hue}, 100%, 80%, 0.5)`;
+    menuCtx.lineWidth = 1;
+    menuCtx.strokeRect(-c.size/2, -c.size/2, c.size, c.size);
+    menuCtx.restore();
+  }
+}
+animateMenu();
+
+/* =========================================================
+   ЛУНА
+========================================================= */
+const moonSprite = new THREE.Mesh(
+  new THREE.SphereGeometry(2.5, 8, 8),
+  new THREE.MeshBasicMaterial({ color: 0xe0e8f5 })
+);
+scene.add(moonSprite);
+
+/* =========================================================
+   ГЛАВНЫЙ ИГРОВОЙ ЦИКЛ
+========================================================= */
+function gameLoop(now) {
+  requestAnimationFrame(gameLoop);
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+
+  fpsAccum += dt; fpsFrames++;
+  if (fpsAccum >= 0.5) {
+    fps = fpsFrames / fpsAccum;
+    fpsAccum = 0; fpsFrames = 0;
+  }
+
+  if (state === 'playing' && !paused && player) {
+    chunkLoadBudget = Math.max(1, Math.min(4, Math.round(40 / Math.max(20, fps))));
+    player.update(dt, input);
+    updateCameraFromPlayer();
+    updateMining(dt);
+    updateDrops(dt);
+    updateParticles(dt);
+    updateDayNight(dt);
+    updateChunksProgressive();
+    updateStatsUI();
+
+    autoSaveTimer += dt;
+    if (autoSaveTimer > 30) { autoSaveTimer = 0; saveGame(); }
+  } else if (state === 'menu') {
+    // лёгкая смена дня/ночи на фоне меню не нужна, но чистим неактивное
+  }
+
+  // Луна
+  if (moonSprite) {
+    const sa = timeOfDay * Math.PI * 2 - Math.PI / 2;
+    moonSprite.position.set(-Math.cos(sa) * 140, -Math.sin(sa) * 140, 30);
+  }
+
+  // Отладка
+  if (settings.showDebug && state === 'playing' && player) {
+    const biome = world ? world.getBiomeAt(Math.floor(player.pos.x), Math.floor(player.pos.z)) : 0;
+    document.getElementById('debug').innerHTML =
+      `<b>FPS:</b> ${fps.toFixed(0)}<br>` +
+      `<b>XYZ:</b> ${player.pos.x.toFixed(1)} ${player.pos.y.toFixed(1)} ${player.pos.z.toFixed(1)}<br>` +
+      `<b>Биом:</b> ${BIOME_NAMES[biome] || '?'}<br>` +
+      `<b>Режим:</b> ${player.mode === 'creative' ? 'Творческий' : 'Выживание'}<br>` +
+      `<b>Чанки:</b> ${world ? world.chunks.size : 0}<br>` +
+      `<b>Вода:</b> ${player.headInWater ? 'да' : 'нет'}`;
+  }
+
+  // Небо следует за камерой
+  if (sky) sky.position.copy(camera.position);
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(gameLoop);
+
+/* =========================================================
+   RESIZE
+========================================================= */
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  resizeMenuCanvas();
+});
+
+/* =========================================================
+   СТАРТОВАЯ ИНИЦИАЛИЗАЦИЯ
+========================================================= */
+applySettingsToWorld();
+syncSettingsUI();
+renderKeybinds();
+
+if (!hasSave()) {
+  document.getElementById('btnContinue').style.opacity = '0.5';
+}
+
+state = 'menu';
+document.getElementById('menu').classList.remove('hidden');
+
+ </script>
+</body>
+</html>
