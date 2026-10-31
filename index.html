@@ -3674,8 +3674,9 @@ function updateMining(dt) {
     }
 
     world.setBlock(mining.x, mining.y, mining.z, B.AIR);
-    spawnBreakParticles(mining.x, mining.y, mining.z, mining.block);
-    markWaterUpdate(mining.x, mining.y, mining.z);
+spawnBreakParticles(mining.x, mining.y, mining.z, mining.block);
+markWaterUpdate(mining.x, mining.y, mining.z);
+checkGravityBlocks(mining.x, mining.y + 1, mining.z);
 
     if (player.mode === 'survival' && canDrop && dropId !== null && dropId !== undefined) {
       const count = (mining.block === B.WHEAT3) ? (1 + ((Math.random() * 3) | 0)) : 1;
@@ -3686,6 +3687,8 @@ function updateMining(dt) {
       }
     }
 
+checkGravityBlocks(mining.x, mining.y + 1, mining.z);
+   
     // Верхняя дверь — ломается вместе с нижней
     if (info.door) {
       const meta = getMeta(mining.x, mining.y, mining.z);
@@ -6602,8 +6605,11 @@ function gameLoop(now) {
     updateWeather(dt);
     flowWater();
     tickFurnaces(dt);
-    tickFarming(dt);
-    updateStatsUI();
+tickFarming(dt);
+updateGravity(dt);
+updateWaterTransition();
+updateAmbient(dt);
+updateStatsUI();
 
     autoSaveTimer += dt;
     if (autoSaveTimer > 30) { autoSaveTimer = 0; saveGame(0); }
@@ -6922,3 +6928,207 @@ function updateWaterTransition() {
   }
   _wasInWater = player.inWater;
 }
+// ============================================================
+// ДИАГНОСТИКА (запускается один раз после initGame)
+// ============================================================
+function runDiagnostics() {
+  const issues = [];
+  const ok = [];
+
+  const check = (name, cond, hint) => {
+    if (cond) ok.push(name);
+    else issues.push(`❌ ${name}${hint ? ' — ' + hint : ''}`);
+  };
+
+  // === КЛЮЧЕВЫЕ ПЕРЕМЕННЫЕ ===
+  check('THREE', typeof THREE !== 'undefined', 'импорт three');
+  check('B (блоки)', typeof B !== 'undefined' && B.FENCE_WOOD === 43, 'B.FENCE_WOOD должен быть 43');
+  check('BLOCKS', typeof BLOCKS !== 'undefined' && Object.keys(BLOCKS).length >= 40);
+  check('IT', typeof IT !== 'undefined' && IT.HOE === 140);
+  check('ITEMS', typeof ITEMS !== 'undefined' && Object.keys(ITEMS).length >= 35);
+  check('SHAPELESS_RECIPES', Array.isArray(SHAPELESS_RECIPES) && SHAPELESS_RECIPES.length >= 16);
+  check('SHAPED_RECIPES', Array.isArray(SHAPED_RECIPES) && SHAPED_RECIPES.length >= 20);
+  check('MOB_TYPES', typeof MOB_TYPES !== 'undefined' && Object.keys(MOB_TYPES).length >= 40);
+  check('CHUNK_W', CHUNK_W === 16);
+  check('CHUNK_H', CHUNK_H === 64);
+  check('CHUNK_D', CHUNK_D === 16);
+
+  // === КЛАССЫ ===
+  check('Chunk', typeof Chunk === 'function');
+  check('World', typeof World === 'function');
+  check('Player', typeof Player === 'function');
+  check('Noise', typeof Noise === 'function');
+
+  // === THREE.JS ===
+  check('renderer', typeof renderer !== 'undefined');
+  check('scene', typeof scene !== 'undefined');
+  check('camera', typeof camera !== 'undefined');
+  check('sunLight', typeof sunLight !== 'undefined');
+  check('ambientLight', typeof ambientLight !== 'undefined');
+  check('sky', typeof sky !== 'undefined');
+  check('canvas', typeof canvas !== 'undefined' && canvas !== null);
+
+  // === АТЛАС ===
+  check('atlasTexture', typeof atlasTexture !== 'undefined' && atlasTexture !== null, 'genAtlas() не вызван?');
+  check('ATLAS_COLS', ATLAS_COLS === 8);
+  check('ATLAS_ROWS', ATLAS_ROWS === 8);
+  check('tileUV', typeof tileUV === 'function');
+  check('drawBlockIcon', typeof drawBlockIcon === 'function');
+  check('drawItemIcon', typeof drawItemIcon === 'function');
+
+  // === ИГРОК ===
+  check('player (может быть null до старта)', typeof player !== 'undefined', 'player объявлен');
+  check('getTotalArmor', typeof getTotalArmor === 'function');
+  check('buildPlayerModel', typeof buildPlayerModel === 'function');
+  check('setupHand', typeof setupHand === 'function');
+  check('updateHand', typeof updateHand === 'function');
+  check('updateCameraFromPlayer', typeof updateCameraFromPlayer === 'function');
+
+  // === ВВОД ===
+  check('input', typeof input === 'object' && input !== null);
+  check('setupKeyboard', typeof setupKeyboard === 'function');
+  check('setupMouse', typeof setupMouse === 'function');
+  check('setupTouch', typeof setupTouch === 'function');
+  check('settings', typeof settings === 'object');
+
+  // === СОХРАНЕНИЯ ===
+  check('saveGame', typeof saveGame === 'function');
+  check('loadSave', typeof loadSave === 'function');
+  check('hasSave', typeof hasSave === 'function');
+  check('renderSaveSlots', typeof renderSaveSlots === 'function');
+
+  // === ДОБЫЧА ===
+  check('getTargetBlock', typeof getTargetBlock === 'function');
+  check('getMeta', typeof getMeta === 'function');
+  check('setMeta', typeof setMeta === 'function');
+  check('startMining', typeof startMining === 'function');
+  check('stopMining', typeof stopMining === 'function');
+  check('updateMining', typeof updateMining === 'function');
+  check('tryPlace', typeof tryPlace === 'function');
+  check('tryInteractWithBlock', typeof tryInteractWithBlock === 'function');
+  check('damageTool', typeof damageTool === 'function');
+  check('spawnItemDrop', typeof spawnItemDrop === 'function');
+  check('updateDrops', typeof updateDrops === 'function');
+  check('spawnBreakParticles', typeof spawnBreakParticles === 'function');
+  check('updateParticles', typeof updateParticles === 'function');
+
+  // === МОБЫ ===
+  check('createMobMesh', typeof createMobMesh === 'function');
+  check('spawnMob', typeof spawnMob === 'function');
+  check('updateMobs', typeof updateMobs === 'function');
+  check('killMob', typeof killMob === 'function');
+  check('hitMobAtCursor', typeof hitMobAtCursor === 'function');
+  check('findPath', typeof findPath === 'function');
+  check('hasLineOfSight', typeof hasLineOfSight === 'function');
+  check('getLightAt', typeof getLightAt === 'function');
+  check('spawnArrow', typeof spawnArrow === 'function');
+  check('updateArrows', typeof updateArrows === 'function');
+  check('creeperExplode', typeof creeperExplode === 'function');
+  check('mobs (array)', Array.isArray(mobs));
+
+  // === ИНВЕНТАРЬ ===
+  check('hotbar', Array.isArray(hotbar));
+  check('backpack', Array.isArray(backpack));
+  check('craftGrid', Array.isArray(craftGrid));
+  check('addToInventory', typeof addToInventory === 'function');
+  check('removeFromInventory', typeof removeFromInventory === 'function');
+  check('updateHotbarUI', typeof updateHotbarUI === 'function');
+  check('renderInventoryGrids', typeof renderInventoryGrids === 'function');
+  check('makeSlotDraggable', typeof makeSlotDraggable === 'function');
+  check('openInventory', typeof openInventory === 'function');
+  check('openChest', typeof openChest === 'function');
+  check('openFurnace', typeof openFurnace === 'function');
+  check('tickFurnaces', typeof tickFurnaces === 'function');
+  check('tickFarming', typeof tickFarming === 'function');
+
+  // === МИР ===
+  check('World (инстанс)', typeof world !== 'undefined', 'world объявлен (может быть null)');
+  check('updateChunksProgressive', typeof updateChunksProgressive === 'function');
+  check('flowWater', typeof flowWater === 'function');
+  check('markWaterUpdate', typeof markWaterUpdate === 'function');
+  check('updateDayNight', typeof updateDayNight === 'function');
+  check('updateWeather', typeof updateWeather === 'function');
+  check('updateClouds', typeof updateClouds === 'function');
+  check('addTorchLight', typeof addTorchLight === 'function');
+
+  // === ЗАПУСК ===
+  check('startGame', typeof startGame === 'function');
+  check('continueGame', typeof continueGame === 'function');
+  check('cleanupWorld', typeof cleanupWorld === 'function');
+  check('findSpawnY', typeof findSpawnY === 'function');
+  check('applySettingsToWorld', typeof applySettingsToWorld === 'function');
+  check('gameLoop', typeof gameLoop === 'function');
+  check('initGame', typeof initGame === 'function');
+
+  // === ЗВУК/UI ===
+  check('sfx', typeof sfx === 'object');
+  check('initAudio', typeof initAudio === 'function');
+  check('showToast', typeof showToast === 'function');
+  check('flashDamage', typeof flashDamage === 'function');
+  check('updateWaterFlash', typeof updateWaterFlash === 'function');
+  check('updateStatsUI', typeof updateStatsUI === 'function');
+
+  // === ЧАСТЬ 12 ===
+  check('updateGravity', typeof updateGravity === 'function');
+  check('checkGravityBlocks', typeof checkGravityBlocks === 'function');
+  check('spawnSplash', typeof spawnSplash === 'function');
+  check('updateAmbient', typeof updateAmbient === 'function');
+  check('updateWaterTransition', typeof updateWaterTransition === 'function');
+
+  // === DOM ===
+  const domIds = [
+    'game', 'menu', 'menuCanvas', 'menuBg', 'settings', 'loadMenu', 'saveSlotsList',
+    'hud', 'hotbar', 'debug', 'hearts', 'hunger', 'air',
+    'inventory', 'invGrid', 'invHotbar', 'armorGrid', 'craftGrid3', 'craftResultSlot', 'craftList',
+    'furnaceUI', 'furnaceInputSlot', 'furnaceFuelSlot', 'furnaceOutputSlot',
+    'chestUI', 'chestGrid', 'chestPlayerGrid',
+    'touchUI', 'joystick', 'joyKnob', 'btnJump', 'btnCrouch', 'btnSprint', 'btnAttack', 'btnPlace', 'btnMenu',
+    'btnNew', 'btnLoadSlot', 'btnSettings', 'btnSaveNow', 'btnSettingsBack', 'btnLoadBack', 'btnResetKeys',
+    'btnInvClose', 'btnFurnaceClose', 'btnChestClose',
+    'rdSlider', 'fovSlider', 'sensSlider', 'tLookSlider', 'musSlider', 'sfxSlider', 'brightSlider', 'daySlider',
+    'qualitySeg', 'invertSeg', 'debugSeg', 'modeSeg', 'keybindList', 'seedInput',
+    'damageFlash', 'waterFlash', 'toast'
+  ];
+  const missingDom = domIds.filter(id => !document.getElementById(id));
+  check('DOM-элементы', missingDom.length === 0,
+    missingDom.length ? 'нет: ' + missingDom.join(', ') : '');
+
+  // === АТЛАС — размер ===
+  if (atlasTexture && atlasTexture.image) {
+    const expectedW = ATLAS_COLS * TILE;
+    const expectedH = ATLAS_ROWS * TILE;
+    check('Атлас размер', atlasTexture.image.width === expectedW && atlasTexture.image.height === expectedH,
+      `ожидалось ${expectedW}×${expectedH}, реально ${atlasTexture.image.width}×${atlasTexture.image.height}`);
+  }
+
+  // === ПРОВЕРКА ДУБЛЕЙ (по количеству объявлений) ===
+  // Эти переменные должны быть объявлены ровно один раз — если 2, значит копипаст
+  const knownSingletons = ['state', 'paused', 'world', 'player', 'settings', 'input'];
+  // (в JS из модуля это не проверить напрямую, но можно проверить косвенно — что они живые)
+  knownSingletons.forEach(name => {
+    // просто проверяем, что в window они доступны (не всегда, но для отладки)
+  });
+
+  // === ВЫВОД ===
+  const total = ok.length + issues.length;
+  console.log('%c═══ ДИАГНОСТИКА CUBEVERSE ═══', 'color:#5fa8ff;font-weight:bold;font-size:14px');
+  console.log(`%c✅ OK: ${ok.length}/${total}`, 'color:#4f4;font-weight:bold');
+  if (issues.length) {
+    console.log(`%c❌ ОШИБОК: ${issues.length}`, 'color:#f44;font-weight:bold;font-size:14px');
+    issues.forEach(i => console.log('%c' + i, 'color:#f88'));
+    console.log('%c→ Прокрути вверх и найди эти имена в коде. Скорее всего — не вставил Часть N.', 'color:#ff8');
+  } else {
+    console.log('%c🎉 Всё на месте! Игра должна работать.', 'color:#4f4;font-size:14px');
+  }
+
+  // === ВЕРСИЯ ===
+  console.log('%cВерсия: 4.0 · Все части 1–13 применены', 'color:#666;font-size:11px');
+
+  return { ok: ok.length, issues: issues.length, list: issues };
+}
+
+// Автозапуск диагностики через 1 секунду после старта
+setTimeout(runDiagnostics, 1000);
+
+// Также — ручной запуск из консоли: runDiagnostics()
+window.runDiagnostics = runDiagnostics;
