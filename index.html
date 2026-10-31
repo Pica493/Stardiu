@@ -2499,8 +2499,13 @@ function updateHand(dt) {
   const swing = Math.sin(handSwing * Math.PI) * 0.5;
 
   if (handMesh) {
-    handMesh.position.set(bobX, bobY, 0);
-  }
+  camera.remove(handMesh);
+  handMesh.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material && o.material.dispose) o.material.dispose();
+  });
+  handMesh = null;
+}
 
   // Анимация руки и предмета
   handMesh.children.forEach(c => {
@@ -3686,8 +3691,6 @@ checkGravityBlocks(mining.x, mining.y + 1, mining.z);
         spawnItemDrop(mining.x + 0.5, mining.y + 0.5, mining.z + 0.5, IT.APPLE, 1);
       }
     }
-
-checkGravityBlocks(mining.x, mining.y + 1, mining.z);
    
     // Верхняя дверь — ломается вместе с нижней
     if (info.door) {
@@ -4909,13 +4912,14 @@ function updateMobs(dt) {
 
     // === Удаление вдали ===
     if (distToPlayer > 80) {
-      scene.remove(mob.mesh);
-      mob.mesh.traverse(o => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material && o.material !== mat && o.material !== headMat) {
-          if (o.material.dispose) o.material.dispose();
-        }
-      });
+  scene.remove(mob.mesh);
+  mob.mesh.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material && o.material.dispose) o.material.dispose();
+  });
+  if (mob.hpTex) mob.hpTex.dispose();
+  mobs.splice(i, 1);
+}
       if (mob.hpTex) mob.hpTex.dispose();
       mobs.splice(i, 1);
     }
@@ -5844,11 +5848,9 @@ function tickFarming(dt) {
 }
 
 // Подключаем клики по слотам печки
-document.addEventListener('DOMContentLoaded', () => {
-  setupFurnaceSlot('furnaceInputSlot', 'input');
-  setupFurnaceSlot('furnaceFuelSlot', 'fuel');
-  setupFurnaceSlot('furnaceOutputSlot', 'output');
-});
+setupFurnaceSlot('furnaceInputSlot', 'input');
+setupFurnaceSlot('furnaceFuelSlot', 'fuel');
+setupFurnaceSlot('furnaceOutputSlot', 'output');
 
 // ============================================================
 // КНОПКИ ЗАКРЫТИЯ (с проверкой существования)
@@ -6320,9 +6322,13 @@ function cleanupWorld() {
   for (const a of arrows) scene.remove(a.mesh);
   arrows.length = 0;
   if (player && player.model) {
-    scene.remove(player.model);
-    player.model = null;
-  }
+  scene.remove(player.model);
+  player.model.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material && o.material.dispose) o.material.dispose();
+  });
+  player.model = null;
+}
   player = null;
   if (typeof stopMining === 'function') stopMining();
   waterQueue.clear();
@@ -7132,3 +7138,7 @@ setTimeout(runDiagnostics, 1000);
 
 // Также — ручной запуск из консоли: runDiagnostics()
 window.runDiagnostics = runDiagnostics;
+
+ </script>
+</body>
+</html>
