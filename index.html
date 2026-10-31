@@ -2494,18 +2494,9 @@ function updateHand(dt) {
   const bobX = Math.cos(handBobPhase) * 0.03;
   const bobY = Math.sin(handBobPhase * 2) * 0.02;
 
-  // Замах
+    // Замах
   handSwing = Math.max(0, handSwing - dt * 4);
   const swing = Math.sin(handSwing * Math.PI) * 0.5;
-
-  if (handMesh) {
-  camera.remove(handMesh);
-  handMesh.traverse(o => {
-    if (o.geometry) o.geometry.dispose();
-    if (o.material && o.material.dispose) o.material.dispose();
-  });
-  handMesh = null;
-}
 
   // Анимация руки и предмета
   handMesh.children.forEach(c => {
@@ -4910,16 +4901,13 @@ function updateMobs(dt) {
       }
     }
 
-    // === Удаление вдали ===
+        // === Удаление вдали ===
     if (distToPlayer > 80) {
-  scene.remove(mob.mesh);
-  mob.mesh.traverse(o => {
-    if (o.geometry) o.geometry.dispose();
-    if (o.material && o.material.dispose) o.material.dispose();
-  });
-  if (mob.hpTex) mob.hpTex.dispose();
-  mobs.splice(i, 1);
-}
+      scene.remove(mob.mesh);
+      mob.mesh.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material && o.material.dispose) o.material.dispose();
+      });
       if (mob.hpTex) mob.hpTex.dispose();
       mobs.splice(i, 1);
     }
