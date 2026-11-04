@@ -2481,6 +2481,7 @@ class World {
       }
     }
   }
+}
 
       // ============ СВЕТ: функция непрозрачности ============
 function isOpaqueForLight(b) {
@@ -2614,362 +2615,364 @@ function getLightAt(x, y, z) {
   return Math.max(sky, c.blockLight[i]);
 }
 
-        buildMesh(chunk) {
-    const scene = this.scene;
-    const SUBS = chunk.subMeshes.length;
-    for (let s = 0; s < SUBS; s++) {
-      if (chunk.subMeshes[s]) { scene.remove(chunk.subMeshes[s]); chunk.subMeshes[s].geometry.dispose(); chunk.subMeshes[s] = null; }
-      if (chunk.subWaterMeshes[s]) { scene.remove(chunk.subWaterMeshes[s]); chunk.subWaterMeshes[s].geometry.dispose(); chunk.subWaterMeshes[s] = null; }
-      if (chunk.subTransMeshes[s]) { scene.remove(chunk.subTransMeshes[s]); chunk.subTransMeshes[s].geometry.dispose(); chunk.subTransMeshes[s] = null; }
-    }
-    const ox = chunk.cx * CHUNK_W, oz = chunk.cz * CHUNK_D;
-    const self = this;
 
-    function emitFace(P,N,U,I,vi,lx,y,lz,quad,nx,ny,nz,tileIdx) {
-      const uv = tileUV(tileIdx);
-      for (let i=0;i<4;i++) { P.push(lx+quad[i][0], y+quad[i][1], lz+quad[i][2]); N.push(nx,ny,nz); }
-      U.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
-      I.push(vi,vi+1,vi+2,vi,vi+2,vi+3);
-    }
 
-    function visible(a,b) {
-      if (a===B.WATER||a===B.LAVA) return b!==a;
-      if (TRANSPARENT_BLOCKS.has(a)) return b!==a && !(TRANSPARENT_BLOCKS.has(b) && BLOCKS[b]);
-      return b===B.AIR || b===B.WATER || b===B.LAVA || TRANSPARENT_BLOCKS.has(b);
-    }
+      World.prototype.buildMesh = function(chunk) {
+  const scene = this.scene;
+  const SUBS = chunk.subMeshes.length;
+  for (let s = 0; s < SUBS; s++) {
+    if (chunk.subMeshes[s]) { scene.remove(chunk.subMeshes[s]); chunk.subMeshes[s].geometry.dispose(); chunk.subMeshes[s] = null; }
+    if (chunk.subWaterMeshes[s]) { scene.remove(chunk.subWaterMeshes[s]); chunk.subWaterMeshes[s].geometry.dispose(); chunk.subWaterMeshes[s] = null; }
+    if (chunk.subTransMeshes[s]) { scene.remove(chunk.subTransMeshes[s]); chunk.subTransMeshes[s].geometry.dispose(); chunk.subTransMeshes[s] = null; }
+  }
+  const ox = chunk.cx * CHUNK_W, oz = chunk.cz * CHUNK_D;
+  const self = this;
 
-    function emitBox(P,N,U,I,vi,lx,y,lz,wx,wy,wz,box,tileSide,tileTop,tileBot) {
-      const boxes = [
-        {n:[1,0,0],q:[[box.x1,box.y0,box.z0],[box.x1,box.y1,box.z0],[box.x1,box.y1,box.z1],[box.x1,box.y0,box.z1]],t:tileSide,nb:[1,0,0]},
-        {n:[-1,0,0],q:[[box.x0,box.y0,box.z1],[box.x0,box.y1,box.z1],[box.x0,box.y1,box.z0],[box.x0,box.y0,box.z0]],t:tileSide,nb:[-1,0,0]},
-        {n:[0,1,0],q:[[box.x0,box.y1,box.z0],[box.x0,box.y1,box.z1],[box.x1,box.y1,box.z1],[box.x1,box.y1,box.z0]],t:tileTop,nb:[0,1,0]},
-        {n:[0,-1,0],q:[[box.x0,box.y0,box.z0],[box.x1,box.y0,box.z0],[box.x1,box.y0,box.z1],[box.x0,box.y0,box.z1]],t:tileBot,nb:[0,-1,0]},
-        {n:[0,0,1],q:[[box.x1,box.y0,box.z1],[box.x1,box.y1,box.z1],[box.x0,box.y1,box.z1],[box.x0,box.y0,box.z1]],t:tileSide,nb:[0,0,1]},
-        {n:[0,0,-1],q:[[box.x0,box.y0,box.z0],[box.x0,box.y1,box.z0],[box.x1,box.y1,box.z0],[box.x1,box.y0,box.z0]],t:tileSide,nb:[0,0,-1]}
-      ];
-      for (const f of boxes) {
-        const outside = (
-          (f.nb[0]===1 && box.x1>=0.999) || (f.nb[0]===-1 && box.x0<=0.001) ||
-          (f.nb[1]===1 && box.y1>=0.999) || (f.nb[1]===-1 && box.y0<=0.001) ||
-          (f.nb[2]===1 && box.z1>=0.999) || (f.nb[2]===-1 && box.z0<=0.001)
-        );
-        if (outside) {
-          const nb = self.getBlock(wx+f.nb[0], wy+f.nb[1], wz+f.nb[2]);
-          if (nb===B.AIR||nb===B.WATER||nb===B.LAVA||TRANSPARENT_BLOCKS.has(nb) || !BLOCKS[nb]?.solid) {
-            emitFace(P,N,U,I,vi,lx,y,lz,f.q,f.n[0],f.n[1],f.n[2],f.t); vi+=4;
-          }
-        } else {
+  function emitFace(P,N,U,I,vi,lx,y,lz,quad,nx,ny,nz,tileIdx) {
+    const uv = tileUV(tileIdx);
+    for (let i=0;i<4;i++) { P.push(lx+quad[i][0], y+quad[i][1], lz+quad[i][2]); N.push(nx,ny,nz); }
+    U.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
+    I.push(vi,vi+1,vi+2,vi,vi+2,vi+3);
+  }
+
+  function visible(a,b) {
+    if (a===B.WATER||a===B.LAVA) return b!==a;
+    if (TRANSPARENT_BLOCKS.has(a)) return b!==a && !(TRANSPARENT_BLOCKS.has(b) && BLOCKS[b]);
+    return b===B.AIR || b===B.WATER || b===B.LAVA || TRANSPARENT_BLOCKS.has(b);
+  }
+
+  function emitBox(P,N,U,I,vi,lx,y,lz,wx,wy,wz,box,tileSide,tileTop,tileBot) {
+    const boxes = [
+      {n:[1,0,0],q:[[box.x1,box.y0,box.z0],[box.x1,box.y1,box.z0],[box.x1,box.y1,box.z1],[box.x1,box.y0,box.z1]],t:tileSide,nb:[1,0,0]},
+      {n:[-1,0,0],q:[[box.x0,box.y0,box.z1],[box.x0,box.y1,box.z1],[box.x0,box.y1,box.z0],[box.x0,box.y0,box.z0]],t:tileSide,nb:[-1,0,0]},
+      {n:[0,1,0],q:[[box.x0,box.y1,box.z0],[box.x0,box.y1,box.z1],[box.x1,box.y1,box.z1],[box.x1,box.y1,box.z0]],t:tileTop,nb:[0,1,0]},
+      {n:[0,-1,0],q:[[box.x0,box.y0,box.z0],[box.x1,box.y0,box.z0],[box.x1,box.y0,box.z1],[box.x0,box.y0,box.z1]],t:tileBot,nb:[0,-1,0]},
+      {n:[0,0,1],q:[[box.x1,box.y0,box.z1],[box.x1,box.y1,box.z1],[box.x0,box.y1,box.z1],[box.x0,box.y0,box.z1]],t:tileSide,nb:[0,0,1]},
+      {n:[0,0,-1],q:[[box.x0,box.y0,box.z0],[box.x0,box.y1,box.z0],[box.x1,box.y1,box.z0],[box.x1,box.y0,box.z0]],t:tileSide,nb:[0,0,-1]}
+    ];
+    for (const f of boxes) {
+      const outside = (
+        (f.nb[0]===1 && box.x1>=0.999) || (f.nb[0]===-1 && box.x0<=0.001) ||
+        (f.nb[1]===1 && box.y1>=0.999) || (f.nb[1]===-1 && box.y0<=0.001) ||
+        (f.nb[2]===1 && box.z1>=0.999) || (f.nb[2]===-1 && box.z0<=0.001)
+      );
+      if (outside) {
+        const nb = self.getBlock(wx+f.nb[0], wy+f.nb[1], wz+f.nb[2]);
+        if (nb===B.AIR||nb===B.WATER||nb===B.LAVA||TRANSPARENT_BLOCKS.has(nb) || !BLOCKS[nb]?.solid) {
           emitFace(P,N,U,I,vi,lx,y,lz,f.q,f.n[0],f.n[1],f.n[2],f.t); vi+=4;
         }
+      } else {
+        emitFace(P,N,U,I,vi,lx,y,lz,f.q,f.n[0],f.n[1],f.n[2],f.t); vi+=4;
       }
-      return vi;
     }
+    return vi;
+  }
 
-    for (let s = 0; s < SUBS; s++) {
-      if (!chunk.dirty[s]) continue;
-      chunk.dirty[s] = 0;
-      const y0 = s * SUB, y1 = Math.min(CHUNK_H, y0 + SUB);
-      const posS=[],normS=[],uvS=[],idxS=[],colS=[];
-      const posW=[],normW=[],uvW=[],idxW=[];
-      const posT=[],normT=[],uvT=[],idxT=[];
-      let viS=0,viW=0,viT=0;
+  for (let s = 0; s < SUBS; s++) {
+    if (!chunk.dirty[s]) continue;
+    chunk.dirty[s] = 0;
+    const y0 = s * SUB, y1 = Math.min(CHUNK_H, y0 + SUB);
+    const posS=[],normS=[],uvS=[],idxS=[],colS=[];
+    const posW=[],normW=[],uvW=[],idxW=[];
+    const posT=[],normT=[],uvT=[],idxT=[];
+    let viS=0,viW=0,viT=0;
 
-      for (let y = y0; y < y1; y++) for (let lz = 0; lz < CHUNK_D; lz++) for (let lx = 0; lx < CHUNK_W; lx++) {
-        const blk = chunk.getBlock(lx, y, lz);
-        if (blk === B.AIR) continue;
-        const info = BLOCKS[blk];
-        if (!info) continue;
-        const isWater = blk === B.WATER || blk === B.LAVA;
-        const isTrans = TRANSPARENT_BLOCKS.has(blk) && !isWater;
-        const wx = ox+lx, wz = oz+lz;
-        const meta = chunk.getWaterLevel(lx, y, lz);
+    for (let y = y0; y < y1; y++) for (let lz = 0; lz < CHUNK_D; lz++) for (let lx = 0; lx < CHUNK_W; lx++) {
+      const blk = chunk.getBlock(lx, y, lz);
+      if (blk === B.AIR) continue;
+      const info = BLOCKS[blk];
+      if (!info) continue;
+      const isWater = blk === B.WATER || blk === B.LAVA;
+      const isTrans = TRANSPARENT_BLOCKS.has(blk) && !isWater;
+      const wx = ox+lx, wz = oz+lz;
+      const meta = chunk.getWaterLevel(lx, y, lz);
 
-        // === TORCH ===
-        if (blk === B.TORCH) {
-          if (typeof addTorchLight === 'function') addTorchLight(wx, y, wz);
-          const uv = tileUV(30);
-          const addX = (v1,v2,v3,v4,nx,ny,nz) => {
-            posT.push(lx+v1[0],y+v1[1],lz+v1[2],lx+v2[0],y+v2[1],lz+v2[2],lx+v3[0],y+v3[1],lz+v3[2],lx+v4[0],y+v4[1],lz+v4[2]);
-            for (let i=0;i<4;i++) normT.push(nx,ny,nz);
-            uvT.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
-            idxT.push(viT,viT+1,viT+2,viT,viT+2,viT+3); viT+=4;
-          };
-          const sd = 0.15;
-          addX([0.5-sd,0,0.5-sd],[0.5-sd,1,0.5-sd],[0.5+sd,1,0.5+sd],[0.5+sd,0,0.5+sd],-1,0,-1);
-          addX([0.5+sd,0,0.5-sd],[0.5+sd,1,0.5-sd],[0.5-sd,1,0.5+sd],[0.5-sd,0,0.5+sd],1,0,-1);
-          continue;
-        }
+      // === TORCH ===
+      if (blk === B.TORCH) {
+        if (typeof addTorchLight === 'function') addTorchLight(wx, y, wz);
+        const uv = tileUV(30);
+        const addX = (v1,v2,v3,v4,nx,ny,nz) => {
+          posT.push(lx+v1[0],y+v1[1],lz+v1[2],lx+v2[0],y+v2[1],lz+v2[2],lx+v3[0],y+v3[1],lz+v3[2],lx+v4[0],y+v4[1],lz+v4[2]);
+          for (let i=0;i<4;i++) normT.push(nx,ny,nz);
+          uvT.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
+          idxT.push(viT,viT+1,viT+2,viT,viT+2,viT+3); viT+=4;
+        };
+        const sd = 0.15;
+        addX([0.5-sd,0,0.5-sd],[0.5-sd,1,0.5-sd],[0.5+sd,1,0.5+sd],[0.5+sd,0,0.5+sd],-1,0,-1);
+        addX([0.5+sd,0,0.5-sd],[0.5+sd,1,0.5-sd],[0.5-sd,1,0.5+sd],[0.5-sd,0,0.5+sd],1,0,-1);
+        continue;
+      }
 
-        // === FIRE (скрещённые плоскости) ===
-        if (blk === B.FIRE) {
-          const uv = tileUV(56);
-          const quads = [
-            {p:[[0.05,0,0.05],[0.95,0,0.95],[0.95,1,0.95],[0.05,1,0.05]], n:[0.707,0,0.707]},
-            {p:[[0.95,0,0.05],[0.05,0,0.95],[0.05,1,0.95],[0.95,1,0.05]], n:[-0.707,0,0.707]}
-          ];
-          for (const q of quads) {
-            for (let i = 0; i < 4; i++) {
-              posT.push(lx+q.p[i][0], y+q.p[i][1], lz+q.p[i][2]);
-              normT.push(q.n[0], q.n[1], q.n[2]);
-            }
-            uvT.push(uv.u0,uv.v0, uv.u0,uv.v1, uv.u1,uv.v1, uv.u1,uv.v0);
-            idxT.push(viT, viT+1, viT+2, viT, viT+2, viT+3);
-            viT += 4;
-          }
-          continue;
-        }
-
-        // === LADDER (тонкая панель) ===
-        if (info.ladder) {
-          const dir = meta & 3;
-          const t = 0.0625;
-          let box;
-          if (dir === 0)      box = {x0:0.0625, y0:0, z0:0,      x1:0.9375, y1:1, z1:t};
-          else if (dir === 2) box = {x0:0.0625, y0:0, z0:1-t,    x1:0.9375, y1:1, z1:1};
-          else if (dir === 1) box = {x0:0,      y0:0, z0:0.0625, x1:t,      y1:1, z1:0.9375};
-          else                box = {x0:1-t,    y0:0, z0:0.0625, x1:1,      y1:1, z1:0.9375};
-          viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
-          continue;
-        }
-
-        // === STAIRS ===
-        if (info.stairs) {
-          const dir = meta & 3;
-          const boxes = [{x0:0,y0:0,z0:0,x1:1,y1:0.5,z1:1}];
-          if (dir===0) boxes.push({x0:0,y0:0.5,z0:0.5,x1:1,y1:1,z1:1});
-          else if (dir===2) boxes.push({x0:0,y0:0.5,z0:0,x1:1,y1:1,z1:0.5});
-          else if (dir===1) boxes.push({x0:0.5,y0:0.5,z0:0,x1:1,y1:1,z1:1});
-          else boxes.push({x0:0,y0:0.5,z0:0,x1:0.5,y1:1,z1:1});
-          for (const box of boxes) viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
-          continue;
-        }
-
-        // === DOOR (ось совпадает со стеной — патч 21A) ===
-        if (info.door) {
-          const dir = meta & 3, isOpen = (meta & 4) !== 0, t = 0.1;
-          let box;
-          if (!isOpen) {
-            if (dir === 0 || dir === 2) box = {x0:0, y0:0, z0:0.5-t, x1:1, y1:1, z1:0.5+t};
-            else                        box = {x0:0.5-t, y0:0, z0:0, x1:0.5+t, y1:1, z1:1};
-          } else {
-            if (dir === 0 || dir === 2) box = {x0:0.5-t, y0:0, z0:0, x1:0.5+t, y1:1, z1:1};
-            else                        box = {x0:0, y0:0, z0:0.5-t, x1:1, y1:1, z1:0.5+t};
-          }
-          viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.side,info.side);
-          continue;
-        }
-
-        // === FENCE ===
-        if (info.fence) {
-          viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,{x0:0.375,y0:0,z0:0.375,x1:0.625,y1:1,z1:0.625},info.side,info.top,info.bottom);
-          const neighbors = [
-            {dx:1,dz:0,box:{x0:0.625,y0:0.4,z0:0.4,x1:1,y1:0.6,z1:0.6}},
-            {dx:-1,dz:0,box:{x0:0,y0:0.4,z0:0.4,x1:0.375,y1:0.6,z1:0.6}},
-            {dx:0,dz:1,box:{x0:0.4,y0:0.4,z0:0.625,x1:0.6,y1:0.6,z1:1}},
-            {dx:0,dz:-1,box:{x0:0.4,y0:0.4,z0:0,x1:0.6,y1:0.6,z1:0.375}}
-          ];
-          for (const n of neighbors) {
-            const nb = self.getBlock(wx+n.dx, y, wz+n.dz);
-            const nbInfo = BLOCKS[nb];
-            if (nb === B.AIR) continue;
-            if (!(nbInfo && (nbInfo.fence || nbInfo.solid))) continue;
-            viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,n.box,info.side,info.top,info.bottom);
-          }
-          continue;
-        }
-
-        // === PANE ===
-        if (info.pane) {
-          viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,
-            {x0:0.4375,y0:0,z0:0.4375,x1:0.5625,y1:1,z1:0.5625},
-            info.side, info.top, info.bottom);
-          const paneNbrs = [
-            {dx:1,dz:0,box:{x0:0.5625,y0:0.4375,z0:0.4375,x1:1.0000,y1:0.5625,z1:0.5625}},
-            {dx:-1,dz:0,box:{x0:0.0000,y0:0.4375,z0:0.4375,x1:0.4375,y1:0.5625,z1:0.5625}},
-            {dx:0,dz:1,box:{x0:0.4375,y0:0.4375,z0:0.5625,x1:0.5625,y1:0.5625,z1:1.0000}},
-            {dx:0,dz:-1,box:{x0:0.4375,y0:0.4375,z0:0.0000,x1:0.5625,y1:0.5625,z1:0.4375}}
-          ];
-          for (const n of paneNbrs) {
-            const nb = self.getBlock(wx+n.dx, y, wz+n.dz);
-            const nbi = BLOCKS[nb];
-            if (!(nbi && (nbi.solid || nb === B.GLASS_PANE || nbi.pane))) continue;
-            viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,n.box,info.side,info.top,info.bottom);
-          }
-          continue;
-        }
-
-        // === BED ===
-        if (blk === B.BED) {
-          viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,
-            {x0:0, y0:0, z0:0, x1:1, y1:0.5, z1:1},
-            info.side, info.top, info.bottom);
-          continue;
-        }
-
-        // === SLAB ===
-        if (info.slab) {
-          const isTop = meta === 1;
-          const box = isTop ? {x0:0,y0:0.5,z0:0,x1:1,y1:1,z1:1} : {x0:0,y0:0,z0:0,x1:1,y1:0.5,z1:1};
-          viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
-          continue;
-        }
-
-        // === Обычный блок ===
-        const faces = [
-          {n:[1,0,0],c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]],f:'side',t1:[0,0,1],t2:[0,1,0]},
-          {n:[-1,0,0],c:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]],f:'side',t1:[0,0,-1],t2:[0,1,0]},
-          {n:[0,1,0],c:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]],f:'top',t1:[0,0,1],t2:[1,0,0]},
-          {n:[0,-1,0],c:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],f:'bottom',t1:[1,0,0],t2:[0,0,1]},
-          {n:[0,0,1],c:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]],f:'side',t1:[-1,0,0],t2:[0,1,0]},
-          {n:[0,0,-1],c:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]],f:'side',t1:[1,0,0],t2:[0,1,0]}
+      // === FIRE ===
+      if (blk === B.FIRE) {
+        const uv = tileUV(56);
+        const quads = [
+          {p:[[0.05,0,0.05],[0.95,0,0.95],[0.95,1,0.95],[0.05,1,0.05]], n:[0.707,0,0.707]},
+          {p:[[0.95,0,0.05],[0.05,0,0.95],[0.05,1,0.95],[0.95,1,0.05]], n:[-0.707,0,0.707]}
         ];
-        for (const face of faces) {
-          const nx = wx+face.n[0], ny = y+face.n[1], nz = wz+face.n[2];
-          const nb = self.getBlock(nx,ny,nz);
-          if (!visible(blk,nb)) continue;
-          const tileIdx = face.f==='top'?info.top:face.f==='bottom'?info.bottom:info.side;
-          const uv = tileUV(tileIdx);
-          const P = isWater?posW:(isTrans?posT:posS);
-          const N = isWater?normW:(isTrans?normT:normS);
-          const U = isWater?uvW:(isTrans?uvT:uvS);
-          const I = isWater?idxW:(isTrans?idxT:idxS);
-          const C = (isWater||isTrans)?null:colS;
-          const viRef = isWater?viW:(isTrans?viT:viS);
+        for (const q of quads) {
           for (let i = 0; i < 4; i++) {
-            const cc = face.c[i];
-            P.push(lx+cc[0], y+cc[1], lz+cc[2]);
-            N.push(face.n[0],face.n[1],face.n[2]);
-            if (C) {
-              const vx = cc[0], vy = cc[1], vz = cc[2];
-              const dir1 = (vx * face.t1[0] + vy * face.t1[1] + vz * face.t1[2]) * 2 - 1;
-              const dir2 = (vx * face.t2[0] + vy * face.t2[1] + vz * face.t2[2]) * 2 - 1;
-              const s1x = face.n[0] + face.t1[0] * dir1;
-              const s1y = face.n[1] + face.t1[1] * dir1;
-              const s1z = face.n[2] + face.t1[2] * dir1;
-              const s2x = face.n[0] + face.t2[0] * dir2;
-              const s2y = face.n[1] + face.t2[1] * dir2;
-              const s2z = face.n[2] + face.t2[2] * dir2;
-              const scx = face.n[0] + face.t1[0] * dir1 + face.t2[0] * dir2;
-              const scy = face.n[1] + face.t1[1] * dir1 + face.t2[1] * dir2;
-              const scz = face.n[2] + face.t1[2] * dir1 + face.t2[2] * dir2;
-              const blk1 = self.getBlock(wx + s1x, y + s1y, wz + s1z);
-              const blk2 = self.getBlock(wx + s2x, y + s2y, wz + s2z);
-              const blkc = self.getBlock(wx + scx, y + scy, wz + scz);
-              const o1 = (blk1 !== B.AIR && !TRANSPARENT_BLOCKS.has(blk1)) ? 1 : 0;
-              const o2 = (blk2 !== B.AIR && !TRANSPARENT_BLOCKS.has(blk2)) ? 1 : 0;
-              const oc = (blkc !== B.AIR && !TRANSPARENT_BLOCKS.has(blkc)) ? 1 : 0;
-              let ao;
-              if (o1 && o2) ao = 0; else ao = 3 - (o1 + o2 + oc);
-              const aof = 0.55 + (ao / 3) * 0.45;
-              C.push(aof, aof, aof);
-            }
+            posT.push(lx+q.p[i][0], y+q.p[i][1], lz+q.p[i][2]);
+            normT.push(q.n[0], q.n[1], q.n[2]);
           }
-          U.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
-          I.push(viRef,viRef+1,viRef+2,viRef,viRef+2,viRef+3);
-          if (isWater) viW+=4; else if (isTrans) viT+=4; else viS+=4;
+          uvT.push(uv.u0,uv.v0, uv.u0,uv.v1, uv.u1,uv.v1, uv.u1,uv.v0);
+          idxT.push(viT, viT+1, viT+2, viT, viT+2, viT+3);
+          viT += 4;
         }
+        continue;
       }
 
-      const makeGeo = (pos,norm,uv,idx,col) => {
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos),3));
-        g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(norm),3));
-        g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv),2));
-        if (col) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col),3));
-        g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx),1));
-        return g;
-      };
-      if (posS.length) {
-        const m = new THREE.Mesh(makeGeo(posS,normS,uvS,idxS,colS), this.matSolid);
-        m.position.set(ox,0,oz);
-        scene.add(m);
-        chunk.subMeshes[s] = m;
+      // === LADDER ===
+      if (info.ladder) {
+        const dir = meta & 3;
+        const t = 0.0625;
+        let box;
+        if (dir === 0)      box = {x0:0.0625, y0:0, z0:0,      x1:0.9375, y1:1, z1:t};
+        else if (dir === 2) box = {x0:0.0625, y0:0, z0:1-t,    x1:0.9375, y1:1, z1:1};
+        else if (dir === 1) box = {x0:0,      y0:0, z0:0.0625, x1:t,      y1:1, z1:0.9375};
+        else                box = {x0:1-t,    y0:0, z0:0.0625, x1:1,      y1:1, z1:0.9375};
+        viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
+        continue;
       }
-      if (posT.length) {
-        const m = new THREE.Mesh(makeGeo(posT,normT,uvT,idxT,null), this.matTransparent);
-        m.position.set(ox,0,oz);
-        scene.add(m);
-        chunk.subTransMeshes[s] = m;
+
+      // === STAIRS ===
+      if (info.stairs) {
+        const dir = meta & 3;
+        const boxes = [{x0:0,y0:0,z0:0,x1:1,y1:0.5,z1:1}];
+        if (dir===0) boxes.push({x0:0,y0:0.5,z0:0.5,x1:1,y1:1,z1:1});
+        else if (dir===2) boxes.push({x0:0,y0:0.5,z0:0,x1:1,y1:1,z1:0.5});
+        else if (dir===1) boxes.push({x0:0.5,y0:0.5,z0:0,x1:1,y1:1,z1:1});
+        else boxes.push({x0:0,y0:0.5,z0:0,x1:0.5,y1:1,z1:1});
+        for (const box of boxes) viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
+        continue;
       }
-      if (posW.length) {
-        const m = new THREE.Mesh(makeGeo(posW,normW,uvW,idxW,null), this.matWater);
-        m.position.set(ox, 0, oz);
-        m.renderOrder = 1;
-        m.frustumCulled = true;
-        scene.add(m);
-        chunk.subWaterMeshes[s] = m;
+
+      // === DOOR ===
+      if (info.door) {
+        const dir = meta & 3, isOpen = (meta & 4) !== 0, t = 0.1;
+        let box;
+        if (!isOpen) {
+          if (dir === 0 || dir === 2) box = {x0:0, y0:0, z0:0.5-t, x1:1, y1:1, z1:0.5+t};
+          else                        box = {x0:0.5-t, y0:0, z0:0, x1:0.5+t, y1:1, z1:1};
+        } else {
+          if (dir === 0 || dir === 2) box = {x0:0.5-t, y0:0, z0:0, x1:0.5+t, y1:1, z1:1};
+          else                        box = {x0:0, y0:0, z0:0.5-t, x1:1, y1:1, z1:0.5+t};
+        }
+        viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.side,info.side);
+        continue;
+      }
+
+      // === FENCE ===
+      if (info.fence) {
+        viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,{x0:0.375,y0:0,z0:0.375,x1:0.625,y1:1,z1:0.625},info.side,info.top,info.bottom);
+        const neighbors = [
+          {dx:1,dz:0,box:{x0:0.625,y0:0.4,z0:0.4,x1:1,y1:0.6,z1:0.6}},
+          {dx:-1,dz:0,box:{x0:0,y0:0.4,z0:0.4,x1:0.375,y1:0.6,z1:0.6}},
+          {dx:0,dz:1,box:{x0:0.4,y0:0.4,z0:0.625,x1:0.6,y1:0.6,z1:1}},
+          {dx:0,dz:-1,box:{x0:0.4,y0:0.4,z0:0,x1:0.6,y1:0.6,z1:0.375}}
+        ];
+        for (const n of neighbors) {
+          const nb = self.getBlock(wx+n.dx, y, wz+n.dz);
+          const nbInfo = BLOCKS[nb];
+          if (nb === B.AIR) continue;
+          if (!(nbInfo && (nbInfo.fence || nbInfo.solid))) continue;
+          viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,n.box,info.side,info.top,info.bottom);
+        }
+        continue;
+      }
+
+      // === PANE ===
+      if (info.pane) {
+        viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,
+          {x0:0.4375,y0:0,z0:0.4375,x1:0.5625,y1:1,z1:0.5625},
+          info.side, info.top, info.bottom);
+        const paneNbrs = [
+          {dx:1,dz:0,box:{x0:0.5625,y0:0.4375,z0:0.4375,x1:1.0000,y1:0.5625,z1:0.5625}},
+          {dx:-1,dz:0,box:{x0:0.0000,y0:0.4375,z0:0.4375,x1:0.4375,y1:0.5625,z1:0.5625}},
+          {dx:0,dz:1,box:{x0:0.4375,y0:0.4375,z0:0.5625,x1:0.5625,y1:0.5625,z1:1.0000}},
+          {dx:0,dz:-1,box:{x0:0.4375,y0:0.4375,z0:0.0000,x1:0.5625,y1:0.5625,z1:0.4375}}
+        ];
+        for (const n of paneNbrs) {
+          const nb = self.getBlock(wx+n.dx, y, wz+n.dz);
+          const nbi = BLOCKS[nb];
+          if (!(nbi && (nbi.solid || nb === B.GLASS_PANE || nbi.pane))) continue;
+          viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,n.box,info.side,info.top,info.bottom);
+        }
+        continue;
+      }
+
+      // === BED ===
+      if (blk === B.BED) {
+        viT = emitBox(posT,normT,uvT,idxT,viT,lx,y,lz,wx,y,wz,
+          {x0:0, y0:0, z0:0, x1:1, y1:0.5, z1:1},
+          info.side, info.top, info.bottom);
+        continue;
+      }
+
+      // === SLAB ===
+      if (info.slab) {
+        const isTop = meta === 1;
+        const box = isTop ? {x0:0,y0:0.5,z0:0,x1:1,y1:1,z1:1} : {x0:0,y0:0,z0:0,x1:1,y1:0.5,z1:1};
+        viS = emitBox(posS,normS,uvS,idxS,viS,lx,y,lz,wx,y,wz,box,info.side,info.top,info.bottom);
+        continue;
+      }
+
+      // === Обычный блок ===
+      const faces = [
+        {n:[1,0,0],c:[[1,0,0],[1,1,0],[1,1,1],[1,0,1]],f:'side',t1:[0,0,1],t2:[0,1,0]},
+        {n:[-1,0,0],c:[[0,0,1],[0,1,1],[0,1,0],[0,0,0]],f:'side',t1:[0,0,-1],t2:[0,1,0]},
+        {n:[0,1,0],c:[[0,1,0],[0,1,1],[1,1,1],[1,1,0]],f:'top',t1:[0,0,1],t2:[1,0,0]},
+        {n:[0,-1,0],c:[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],f:'bottom',t1:[1,0,0],t2:[0,0,1]},
+        {n:[0,0,1],c:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]],f:'side',t1:[-1,0,0],t2:[0,1,0]},
+        {n:[0,0,-1],c:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]],f:'side',t1:[1,0,0],t2:[0,1,0]}
+      ];
+      for (const face of faces) {
+        const nx = wx+face.n[0], ny = y+face.n[1], nz = wz+face.n[2];
+        const nb = self.getBlock(nx,ny,nz);
+        if (!visible(blk,nb)) continue;
+        const tileIdx = face.f==='top'?info.top:face.f==='bottom'?info.bottom:info.side;
+        const uv = tileUV(tileIdx);
+        const P = isWater?posW:(isTrans?posT:posS);
+        const N = isWater?normW:(isTrans?normT:normS);
+        const U = isWater?uvW:(isTrans?uvT:uvS);
+        const I = isWater?idxW:(isTrans?idxT:idxS);
+        const C = (isWater||isTrans)?null:colS;
+        const viRef = isWater?viW:(isTrans?viT:viS);
+        for (let i = 0; i < 4; i++) {
+          const cc = face.c[i];
+          P.push(lx+cc[0], y+cc[1], lz+cc[2]);
+          N.push(face.n[0],face.n[1],face.n[2]);
+          if (C) {
+            const vx = cc[0], vy = cc[1], vz = cc[2];
+            const dir1 = (vx * face.t1[0] + vy * face.t1[1] + vz * face.t1[2]) * 2 - 1;
+            const dir2 = (vx * face.t2[0] + vy * face.t2[1] + vz * face.t2[2]) * 2 - 1;
+            const s1x = face.n[0] + face.t1[0] * dir1;
+            const s1y = face.n[1] + face.t1[1] * dir1;
+            const s1z = face.n[2] + face.t1[2] * dir1;
+            const s2x = face.n[0] + face.t2[0] * dir2;
+            const s2y = face.n[1] + face.t2[1] * dir2;
+            const s2z = face.n[2] + face.t2[2] * dir2;
+            const scx = face.n[0] + face.t1[0] * dir1 + face.t2[0] * dir2;
+            const scy = face.n[1] + face.t1[1] * dir1 + face.t2[1] * dir2;
+            const scz = face.n[2] + face.t1[2] * dir1 + face.t2[2] * dir2;
+            const blk1 = self.getBlock(wx + s1x, y + s1y, wz + s1z);
+            const blk2 = self.getBlock(wx + s2x, y + s2y, wz + s2z);
+            const blkc = self.getBlock(wx + scx, y + scy, wz + scz);
+            const o1 = (blk1 !== B.AIR && !TRANSPARENT_BLOCKS.has(blk1)) ? 1 : 0;
+            const o2 = (blk2 !== B.AIR && !TRANSPARENT_BLOCKS.has(blk2)) ? 1 : 0;
+            const oc = (blkc !== B.AIR && !TRANSPARENT_BLOCKS.has(blkc)) ? 1 : 0;
+            let ao;
+            if (o1 && o2) ao = 0; else ao = 3 - (o1 + o2 + oc);
+            const aof = 0.55 + (ao / 3) * 0.45;
+            C.push(aof, aof, aof);
+          }
+        }
+        U.push(uv.u0,uv.v0,uv.u0,uv.v1,uv.u1,uv.v1,uv.u1,uv.v0);
+        I.push(viRef,viRef+1,viRef+2,viRef,viRef+2,viRef+3);
+        if (isWater) viW+=4; else if (isTrans) viT+=4; else viS+=4;
+      }
+    }
+
+    const makeGeo = (pos,norm,uv,idx,col) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos),3));
+      g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(norm),3));
+      g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv),2));
+      if (col) g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col),3));
+      g.setIndex(new THREE.BufferAttribute(new Uint32Array(idx),1));
+      return g;
+    };
+    if (posS.length) {
+      const m = new THREE.Mesh(makeGeo(posS,normS,uvS,idxS,colS), this.matSolid);
+      m.position.set(ox,0,oz);
+      scene.add(m);
+      chunk.subMeshes[s] = m;
+    }
+    if (posT.length) {
+      const m = new THREE.Mesh(makeGeo(posT,normT,uvT,idxT,null), this.matTransparent);
+      m.position.set(ox,0,oz);
+      scene.add(m);
+      chunk.subTransMeshes[s] = m;
+    }
+    if (posW.length) {
+      const m = new THREE.Mesh(makeGeo(posW,normW,uvW,idxW,null), this.matWater);
+      m.position.set(ox, 0, oz);
+      m.renderOrder = 1;
+      m.frustumCulled = true;
+      scene.add(m);
+      chunk.subWaterMeshes[s] = m;
+    }
+  }
+};
+
+World.prototype.loadChunk = function(cx, cz) {
+  const key = this.key(cx, cz);
+  if (this.chunks.has(key)) return;
+  const c = new Chunk(cx, cz);
+  this.generateChunk(c);
+  this.chunks.set(key, c);
+  this.buildMesh(c);
+  this.markDirty(cx-1, cz);
+  this.markDirty(cx+1, cz);
+  this.markDirty(cx, cz-1);
+  this.markDirty(cx, cz+1);
+
+  for (const [ncx, ncz] of [[cx-1,cz],[cx+1,cz],[cx,cz-1],[cx,cz+1]]) {
+    const n = this.chunks.get(this.key(ncx, ncz));
+    if (n) n.lightDirty.fill(1);
+  }
+};
+
+World.prototype.unloadChunk = function(key) {
+  const c = this.chunks.get(key);
+  if (!c) return;
+  for (const arr of [c.subMeshes, c.subWaterMeshes, c.subTransMeshes]) {
+    for (const m of arr) if (m) { this.scene.remove(m); m.geometry.dispose(); }
+  }
+  if (typeof torchSprites !== 'undefined') {
+    const ox = c.cx * CHUNK_W, oz = c.cz * CHUNK_D;
+    for (const [k, data] of torchSprites) {
+      if (data.x >= ox && data.x < ox + CHUNK_W && data.z >= oz && data.z < oz + CHUNK_D) {
+        this.scene.remove(data.sprite);
+        if (data.sprite.material) data.sprite.material.dispose();
+        torchSprites.delete(k);
       }
     }
   }
+  if (this._lc === c) { this._lc = null; this._lcx = this._lcz = -999999; }
+  this.chunks.delete(key);
+};
 
-  loadChunk(cx, cz) {
-    const key = this.key(cx, cz);
-    if (this.chunks.has(key)) return;
-    const c = new Chunk(cx, cz);
-    this.generateChunk(c);
-    this.chunks.set(key, c);
-    this.buildMesh(c);
-    this.markDirty(cx-1, cz);
-    this.markDirty(cx+1, cz);
-    this.markDirty(cx, cz-1);
-    this.markDirty(cx, cz+1);
-
-    // Инвалидация света соседей (граница)
-    for (const [ncx, ncz] of [[cx-1,cz],[cx+1,cz],[cx,cz-1],[cx,cz+1]]) {
-      const n = this.chunks.get(this.key(ncx, ncz));
-      if (n) n.lightDirty.fill(1);
-    }
+World.prototype.updateChunkMeshes = function() {
+  let built = 0;
+  const maxPerFrame = 2;
+  const timeBudget = 8;
+  const t0 = performance.now();
+  for (const c of this.chunks.values()) {
+    if (built >= maxPerFrame) break;
+    if (performance.now() - t0 > timeBudget) break;
+    let anyDirty = false;
+    for (let s = 0; s < c.dirty.length; s++) if (c.dirty[s]) { anyDirty = true; break; }
+    if (anyDirty) { this.buildMesh(c); built++; }
   }
+};
 
-  unloadChunk(key) {
-    const c = this.chunks.get(key);
-    if (!c) return;
+World.prototype.dispose = function() {
+  for (const c of this.chunks.values()) {
     for (const arr of [c.subMeshes, c.subWaterMeshes, c.subTransMeshes]) {
       for (const m of arr) if (m) { this.scene.remove(m); m.geometry.dispose(); }
     }
-    if (typeof torchSprites !== 'undefined') {
-      const ox = c.cx * CHUNK_W, oz = c.cz * CHUNK_D;
-      for (const [k, data] of torchSprites) {
-        if (data.x >= ox && data.x < ox + CHUNK_W && data.z >= oz && data.z < oz + CHUNK_D) {
-          this.scene.remove(data.sprite);
-          if (data.sprite.material) data.sprite.material.dispose();
-          torchSprites.delete(k);
-        }
-      }
-    }
-    if (this._lc === c) { this._lc = null; this._lcx = this._lcz = -999999; }
-    this.chunks.delete(key);
   }
-
-  updateChunkMeshes() {
-    let built = 0;
-    const maxPerFrame = 2;
-    const timeBudget = 8;
-    const t0 = performance.now();
-    for (const c of this.chunks.values()) {
-      if (built >= maxPerFrame) break;
-      if (performance.now() - t0 > timeBudget) break;
-      let anyDirty = false;
-      for (let s = 0; s < c.dirty.length; s++) if (c.dirty[s]) { anyDirty = true; break; }
-      if (anyDirty) { this.buildMesh(c); built++; }
-    }
-  }
-
-  dispose() {
-    for (const c of this.chunks.values()) {
-      for (const arr of [c.subMeshes, c.subWaterMeshes, c.subTransMeshes]) {
-        for (const m of arr) if (m) { this.scene.remove(m); m.geometry.dispose(); }
-      }
-    }
-    this.chunks.clear();
-    this._lc = null;
-    this._lcx = this._lcz = -999999;
-    this.matSolid.dispose();
-    this.matWater.dispose();
-    this.matTransparent.dispose();
-  }
-}
-
+  this.chunks.clear();
+  this._lc = null;
+  this._lcx = this._lcz = -999999;
+  this.matSolid.dispose();
+  this.matWater.dispose();
+  this.matTransparent.dispose();
+};
+      
+        
+        
       // ============ ГЛОБАЛЬНЫЕ: настройки и устройство ============
 const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 const canvas = document.getElementById('game');
